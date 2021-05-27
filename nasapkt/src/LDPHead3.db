@@ -1,0 +1,14 @@
+########################################################################
+# This is an ITOS-like database definition for 
+# the product and page number fields of a Swift LDP packet
+########################################################################
+
+# Define delimiter
+DEL,|
+
+#
+# Define each data field with the following format:
+#PKT|APID|Mnemonic||+||type|start byte|start bit|size in bits|||description|
+
+PKT||product ||+||U | 0| 0|  16|||"ID for this large data product"|
+PKT||page    ||+||U | 2| 0|  16|||"Packet counter within LDP"|

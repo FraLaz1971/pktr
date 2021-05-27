@@ -1,0 +1,12 @@
+This directory contains examples of squirt scripts which demonstrate the three
+main used of squirt, viewing, modifying and filtering telemetry.
+
+Each script has comments describing what it does and how to use it.
+
+This directory also contains a sample telemetry file telem.ccsds.
+Squirt scripts read from stdin and write to stdout, so be careful to always
+redirect stdout to a file, or you will have alot of binary dumped to your
+screen.
+
+Check the first (#!) line of the scripts before you use them. You should
+probably change these to indicate where you installed squirt.

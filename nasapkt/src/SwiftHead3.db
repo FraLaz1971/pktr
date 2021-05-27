@@ -1,0 +1,15 @@
+########################################################################
+# This is an ITOS-like database definition for a Swift tertiary header
+########################################################################
+
+# Define delimiter
+DEL,|
+
+#
+# Define each data field with the following format:
+#PKT|APID|Mnemonic||+||type|start byte|start bit|size in bits|||description|
+
+PKT||obs         ||+||U          |  0| 0|   8|||"Observation Segment ID"|
+PKT||target      ||+||U          |  1| 0|  24|||"Target ID"|
+PKT||sc_time     ||+||cSwiftTime |  4| 0|  48|||"Spacecraft Science time"|
+PKT||utcf_time   ||+||cSwiftTime | 10| 0|  48|||"Corrected Science time"|

@@ -1,0 +1,25 @@
+#! /aps/tools/squirt/squirt
+##############################################################################
+# this script renumbers the data products in a stream of LDPs. 
+# The new products numbers start at 1 and increase sequentially. 
+# The script assumes that a change in the original product number indicates
+# the start of a new product.
+##############################################################################
+
+init: $product=-1;
+init: $new_product=$1;
+init: ($new_product == 0 ) && ($new_product = 1);
+
+
+$must_init = $product == -1 && %ldp;
+$must_init && ($product=%product);
+
+
+
+$changed = %ldp && %product != $product;
+$changed && ($product=%product);
+$changed && ($new_product = $new_product + 1);
+
+$changed && "product %product page %page -> $new_product\n";
+%product = $new_product;
+

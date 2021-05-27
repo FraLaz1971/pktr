@@ -1,0 +1,845 @@
+#! /usr/bin/perl -w
+
+use strict;
+
+#########################
+# read the command line 
+#########################
+my $dbfile=shift;
+
+
+#######################################################
+# catalog of known data types
+#######################################################
+my (%default_size, %read_write_method, %c_type, %comment);
+
+
+#######################################################
+# open the database file and loop over all the lines
+######################################################
+open DB, "<$dbfile";
+
+my $delimiter="\,";
+my ( %type, %size, %start_byte, %start_bit);
+my @names;
+my $head_comment_done=0;
+my $head_comment='';
+my $line;
+while(<DB>) {
+
+    ################################
+    # skip blank lines and comments
+    ################################
+    if( /^\s*#/ ) {
+        unless($head_comment_done || /^#*$/) {
+            s/^\s*#/\*/;
+            $head_comment .= $_;
+        }
+        next;
+    } else { $head_comment_done=1; } 
+
+    if(/^\s*$/ ) { next; }
+
+    ##############################
+    # parse the line into fields
+    ##############################
+    chomp;
+    my @fields = split /\s*$delimiter\s*/;
+
+    ###############################################
+    # parse the line according to the first field
+    ###############################################
+    if($fields[0] eq "DEL") {
+        ######################
+        # change the delimiter
+        ######################
+        $delimiter=$fields[1];
+        unless($delimiter) { die "null delimiter specified"; }
+        $delimiter='\|'; # escape the delimiter 
+
+        #print "delimiter is now -$delimiter-\n";
+
+    } elsif($fields[0] eq "PKT" ) {
+        ############################
+        # packet record
+        ############################
+        my $name = $fields[2];
+        push @names, ($name);
+
+        if($fields[6]) { $type{$name} = $fields[6]; }
+        if($fields[9]) { $size{$name} = $fields[9]; }
+
+        $start_byte{$name} = $fields[7];
+        $start_bit{ $name} = $fields[8];
+
+        my $carry=0;
+        if($start_bit{ $name} !~ /^[0-9]+$/  &&
+           $start_byte{$name} !~ /^[0-9]+$/) {
+            #############################################
+            # start bit column not given so calculate it
+            # assuming contiguous data values
+            #############################################
+            if(@names>1) {
+                my $last_name = $names[@names-2];
+                my $last_bit  = $start_bit{ $last_name};
+                my $last_byte = $start_byte{$last_name};
+
+
+                my $current = $last_bit + $size{$last_name};
+
+#print "last byte=$last_byte last bit=$last_bit size=$size{$last_name}\n";
+#print "current=$current\n";
+
+                $start_byte{$name} = $last_byte + int($current/8);
+                $start_bit{$name}  = $current%8;
+
+#print "start byte=$start_byte{$name} start bit=$start_bit{$name}\n\n";
+
+            } else {
+                $start_byte{$name} = 0;
+                $start_bit{$name}  = 0;
+            }
+        } # end if we had to calculate start byte and bit
+
+
+
+        $comment{$name} = $fields[12] || "";
+        $comment{$name} =~ s/^\"//;
+        $comment{$name} =~ s/\"$//;
+
+       # print "$name: type=$type{$name} size=$size{$name} ".
+       #       "byte=$start_byte{$name} ".
+       #       "bit=$start_bit{$name}\n";
+
+    } elsif($fields[0] eq "TLM" ) {
+        ###########################################################
+        # mnemonic record
+        # these can be used to fill in blank data types and sizes
+        ###########################################################
+        my $name = $fields[1];
+        unless($type{$name}) { $type{$name} = $fields[5]; }
+        unless($size{$name}) { $size{$name} = $fields[6]; }
+
+        #print "$name: type=$type{$name} size=$size{$name}\n";
+
+    }
+
+} # end of loop over database lines
+
+####################################
+# check to be sure we got something 
+####################################
+unless(@names) {  die "No packet records. Was 'DEL' delimiter set properly?"; }
+    
+#########################################
+# fill in default data sizes
+#########################################
+my $name;
+foreach $name (@names) {
+
+    unless($size{$name}) {
+
+        $size{$name} = default_size($type{$name});
+        print "size of $name ($type{$name}) defaults to $size{$name}\n";
+    }
+}
+
+##############################################
+# calculate the bit offsets
+##############################################
+my %bit_offset;
+foreach $name (@names) {
+
+    $bit_offset{$name} = 8* $start_byte{$name} + $start_bit{$name};
+
+}
+
+#############################################################
+# sort data fields in order 
+#############################################################
+@names = sort { $bit_offset{$a} <=> $bit_offset{$b} } @names;
+
+
+#########################################################
+# collect the names of all the classes used in the data
+# so that we may include their header files
+#########################################################
+my @classes=();
+
+foreach $name (@names) {
+
+    if($type{$name} =~ /^c/ ) { 
+
+        push @classes, $type{$name} =~ /^c(.*)/;
+    }
+
+}
+
+
+#####################################################
+# get the total size in bytes
+#####################################################
+my $last_name = $names[@names-1];
+
+my $total_size = $bit_offset{$last_name} + $size{$last_name};
+if($total_size % 8) { die "Structure not aligned to bytes ($total_size bits)";}
+
+$total_size /=8;
+
+##############################################################################
+##############################################################################
+# done reading the database, now we can write the C++ code
+##############################################################################
+
+##########################################################
+# get the filename base (everyting up to the last dot) 
+# and generate the class and header file names
+##########################################################
+my ($class) = $dbfile =~ /(.*)\..*/;
+unless( defined $class) { $class=$dbfile; }
+
+my $header = $class . ".h" ;
+my $code   = $class . ".cc";
+
+
+###########################################################
+# name of the "#ifndef" macro used to prevent the header
+# file from being included twice
+##########################################################
+my $ifdef = $header;
+$ifdef =~ s/([a-z])([A-Z])/${1}_${2}/g;
+$ifdef =~ s/\./_/g;
+$ifdef = uc($ifdef);
+
+################################
+# name of the base class parent
+################################
+my $parent = "DataBlock";
+my $reader_class ="Reader";
+my $writer_class = "Writer";
+my $exception = "Interpreter::Exception";
+
+######################################################
+# start the header file
+######################################################
+open  HEADER, ">$header" || die "Can't open $header";
+
+print HEADER "// This file was automatically generated from $dbfile.\n";
+print HEADER "// Do not Edit! Instead, create a subclass to extend ".
+             "functionality\n\n";
+
+
+print HEADER "#ifndef $ifdef\n";
+print HEADER "#define $ifdef\n\n";
+print HEADER "#include \"${parent}.h\"\n";
+
+foreach $class (@classes) {
+    print HEADER "#include \"${class}.h\"\n";
+}
+
+print HEADER "\n";
+print HEADER "/*************************************************************\n";
+print HEADER "* This class was machine generated from the file $dbfile\n";
+print HEADER "* by the perl script db2class.\n";
+print HEADER "*\n";
+print HEADER "* The following comments have been copied from that file:\n";
+print HEADER "*\n";
+print HEADER "$head_comment";
+print HEADER "*************************************************************/\n";
+print HEADER "class $class : public $parent {\n\n";
+
+######################################################
+# start the code file
+######################################################
+open  CODE, ">$code" || die "can't open $code";
+
+print CODE "// This file was automatically generated from $dbfile.\n";
+print CODE "// Do not Edit! Instead, create a subclass to extend ".
+             "functionality\n\n";
+print CODE "#include \"${header}\"\n";
+print CODE "#include <sstream>\n\n";
+
+
+
+#################
+# data
+#################
+print HEADER "public:\n";
+print HEADER "    const static int size=$total_size;\n\n";
+
+print HEADER "private:\n";
+foreach $name (@names) {
+
+    my $c_type = c_type($type{$name});
+    print HEADER "    $c_type _${name};";
+
+    if($comment{$name}) {print HEADER " // $comment{$name}"; }
+   print HEADER "\n";
+
+}
+print HEADER "\n";
+
+######################
+# constructor
+######################
+print HEADER "public:\n";
+print HEADER "    ${class}() : ${parent}() {\n";
+
+foreach $name (@names) {
+
+    if($type{$name} =~ /^c/ ) {
+        my ($class) = $type{$name} =~ /^c(.*)/;
+        print HEADER "        _${name} = new ${class}();\n";
+    }
+}
+
+print HEADER "    } // end of constructor\n\n";
+
+######################
+# copy constructor
+######################
+print HEADER "    ${class}(const ${class}& orig) : ${parent}() {\n";
+foreach $name (@names) {
+
+    if($type{$name} =~ /^c/ ) {
+        ################################################################
+        # classes are stored as pointers so they must be dereferenced
+        ###############################################################
+        print HEADER "        *_${name} =  *(orig.${name}());\n";
+    } else {
+        ################################################################
+        # can just copy regular values
+        ################################################################
+        print HEADER "        _${name} =  orig.${name}();\n";
+    }
+}
+
+print HEADER "    } // end of copy constructor\n\n";
+
+    
+######################
+# get accessors
+######################
+foreach $name (@names) {
+
+    my $c_type = c_type($type{$name});
+
+    print HEADER "    virtual $c_type ${name}() const;\n";
+    print CODE   "    $c_type ${class}::${name}() const { return _$name; }\n";
+
+}
+
+print HEADER "\n";
+print CODE   "\n";
+
+######################
+# set accessors
+######################
+foreach $name (@names) {
+
+    unless($type{$name} =~ /^c/ ) {
+        #################################
+        # don't allow classes to be set 
+        #################################
+        my $c_type = c_type($type{$name});
+        print HEADER "    virtual void ${name}($c_type value);\n";
+
+
+        print CODE   "    void ${class}::${name}($c_type value) ".
+                     "{ _${name} = value; }\n";
+    }
+
+
+}
+print HEADER "\n";
+print CODE   "\n";
+
+
+################################
+# read method
+################################
+print HEADER "    virtual void read(${reader_class}* r) throw(${exception});\n";
+
+print CODE "void ${class}::read(${reader_class}* r) throw(${exception}) {\n\n";
+
+my $offset=0;
+foreach $name (@names) {
+
+   # print "$name offset=$offset bit_offset=$bit_offset{$name} ".
+   #       "size=$size{$name}\n";
+
+    ##############################
+    # check for gaps and overlaps
+    ##############################
+    if($bit_offset{$name} < $offset ) { 
+        die "$name overlaps previous field by ".
+            ($offset-$bit_offset{$name}) .
+            " bits"; 
+    }
+
+    if($bit_offset{$name} > $offset ) {
+        ################
+        # gap
+        ################
+        my $gap=$bit_offset{$name} - $offset;
+
+        if( $gap % 8 || $offset % 8) {
+            ##############################
+            # we're not aligned to bytes, so read by bits
+            ##############################
+            print CODE "    r->readUnsignedBits($gap); ".
+                       "// skipping $gap bit gap\n";
+        } else {
+            ######################################
+            # we are byte aligned, so read bytes
+            ######################################
+            $gap /= 8;
+            my $i;
+            for($i=0; $i<$gap; $i++) {
+
+                print CODE "    r->readByte(); // skipping $gap byte gap\n";
+            }
+        } # end if aligned to bytes
+
+    } # end if there was a gap
+   
+    #########################################
+    # write the method call to the code file
+    #########################################
+    my $method = read_write($name,"read");
+    print CODE "    ${method};\n";
+    
+    #######################################################
+    # update the offset to the end of the last data field
+    #######################################################
+    $offset = $bit_offset{$name} + $size{$name};
+
+} # end of loop over data fields
+
+print CODE "\n} // end of read method\n\n";
+
+################################
+# write method
+################################
+print HEADER "    virtual void write(${writer_class}* w) ".
+             "throw(${exception});\n";
+
+print CODE "void ${class}::write(${writer_class}* w) ".
+           "throw(${exception}) {\n\n";
+
+$offset=0;
+foreach $name (@names) {
+
+    ##############################
+    # check for gaps and overlaps
+    ##############################
+    if($bit_offset{$name} < $offset ) { die "$name overlaps previous datum"; }
+    if($bit_offset{$name} > $offset ) {
+        ################
+        # gap
+        ################
+        my $gap=$bit_offset{$name} - $offset;
+
+        if( $gap % 8 || $offset % 8) {
+            ##############################
+            # we're not aligned to bytes, so read by bits
+            ##############################
+            print CODE "    w->writeUnsignedBits(0,$gap); ".
+                       "// filling $gap bit gap\n";
+        } else {
+            ######################################
+            # we are byte aligned, so read bytes
+            ######################################
+            $gap /= 8;
+            my $i;
+            for($i=0; $i<$gap; $i++) {
+
+                print CODE "    w->writeByte(0); // filling $gap byte gap\n";
+            }
+        } # end if aligned to bytes
+
+    } # end if there was a gap
+   
+    #########################################
+    # write the method call to the code file
+    #########################################
+    my $method = read_write($name,"write");
+    print CODE "    ${method};\n";
+    
+    #######################################################
+    # update the offset to the end of the last data field
+    #######################################################
+    $offset = $bit_offset{$name} + $size{$name};
+
+} # end of loop over data fields
+
+print CODE "\n} // end of write method\n\n";
+
+
+########################################################################
+# string representation method
+########################################################################
+print HEADER "\n    virtual const string& toString();\n\n";
+
+print CODE "const string& ${class}::toString() {\n";
+
+print CODE "    ostringstream s;\n";
+
+my $space="";
+
+foreach $name (@names) {
+
+
+    if($type{$name} =~ /^c/ ) {
+        ################################
+        # call class's toString method 
+        ################################
+        print CODE "    s << \"$space\" << _$name->toString();\n";
+    } else {
+        ######################
+        # write "name=value" 
+        ######################
+        print CODE "    s << \"$space$name=\" << _$name;\n";
+    }
+
+
+    $space=" ";
+
+}
+
+print CODE "#   ifdef FAKING_STRINGSTREAM\n";
+print CODE "    s << ends;\n";
+print CODE "#   endif\n";
+    
+print CODE "    line = s.str();\n";
+print CODE "    return line;\n";
+print CODE "} // end of toString method\n\n";
+
+
+################################
+# define equals
+################################
+my $bool = "int";
+print HEADER "    friend $bool operator==(${class}& left,\n";
+print HEADER   "                            ${class}& right);\n";
+
+print CODE "\n$bool operator==(${class}& left, ${class}& right){\n\n";
+
+foreach $name (@names) {
+ 
+    if($type{$name} =~ /^c/ ) {
+        ###############################
+        # compare contents of classes 
+        ###############################
+        print CODE "    if(*(left.${name}()) != *(right.${name}()) )".
+                   " return false;\n";
+    } else {
+        ###############################
+        # compare built-in types 
+        ###############################
+        print CODE "    if(left.${name}() != right.${name}() )".
+                   " return false;\n";
+    }
+
+}
+
+print CODE "\n    return true;\n";
+print CODE "}\n\n";
+
+################################
+# define not equals
+################################
+print HEADER "\n    friend $bool operator!=(${class}& left, ".
+               "                            ${class}& right);\n";
+
+print CODE "\n$bool operator!=(${class}& left, ${class}& right){\n";
+print CODE "    return !(left==right);\n";
+print CODE "}\n";
+
+################################
+# define copying with equals
+################################
+#print HEADER "\n    friend ${class}& operator=(${class}& left, ".
+#               "                               ${class}& right);\n";
+#
+#print CODE "\n${class} operator=(${class}& left, ${class}& right){\n";
+#print CODE "    left =
+#print CODE "    return !(left==right);\n";
+#print CODE "}\n";
+
+
+
+
+###############################
+# end of the class
+###############################
+print HEADER "\n}; // end of $class class\n";
+print HEADER "#endif // $ifdef\n";
+
+exit(0);
+
+
+######################################################################
+######################################################################
+# utility functions:
+######################################################################
+
+######################################################################
+# return the default size of a given type
+######################################################################
+sub default_size {
+
+my $type=shift || die "no type specified for default_size funtion";
+
+###########
+# integers 
+###########
+if( $type =~ /^[US]B$/ ) { return 8;  }
+if( $type =~ /^[US]I/  ) { return 16; }
+if( $type =~ /^[US]LI/ ) { return 32; }
+if( $type =~/^[UI]$/   ) { return 32; }
+
+if( $type =~ /^[UI]\d+$/ ) { return (length($type)-1)*8; }
+
+
+###################
+# floating point
+###################
+if( $type =~ /^SFP/ ) { return 32; }
+if( $type =~ /^DFP/ ) { return 64; }
+
+if( $type =~ /^F\d+$/ ) { return (length($type)-1)*8; }
+
+
+###################
+# unknown
+###################
+die "unknown type $type\n";
+
+} # end of default_size function
+
+
+
+###########################################################################
+# return the C data type for a given ITOS data type
+###########################################################################
+sub c_type {
+
+my $type = shift || die "no type specified for c_type funtion";
+
+####################################
+# existing DataBlock class
+####################################
+if( $type =~ /^c/ ) {
+    my $class = $type;
+    $class =~ s/^.//;
+    return "${class}*";
+}
+
+################################################
+# unsigned char
+################################################
+if($type eq "UB" || $type eq "U1" ) { return "unsigned char"; }
+
+###########
+# int
+###########
+if( $type =~ /^SB$/ ||
+    $type =~ /^SI/  ||
+    $type =~ /^SLI/ ||
+    $type =~/^I$/   ||
+    $type =~ /^I\d+$/ ) { return "int" };
+
+###############
+# unsigned int
+###############
+if( $type =~ /^UB$/ ||
+    $type =~ /^UI/  ||
+    $type =~ /^ULI/ ||
+    $type =~/^U$/   ||
+    $type =~ /^U\d+$/ ) { return "unsigned int" };
+
+
+###################
+# float
+###################
+if( $type =~ /^SFP/ ) { return "float" ; }
+if( $type =~ /^DFP/ ) { return "double"; }
+
+if( $type =~ /^F\d+$/ ) {
+
+    my $size = length($type)-1;
+    if($size==4) { return "float" ; }
+    if($size==8) { return "double"; }
+
+} 
+
+
+###########################
+# unknown type
+###########################
+die "can't determine C data type for $type";
+
+} # end of c_type function
+
+#############################################################################
+# determine the base name of the read or write method
+# appropriate for this data type
+#############################################################################
+sub read_write_base {
+
+my $type = shift || die "no type specified for read_write funtion";
+
+if($type =~ /^c/) { return "class"; }
+
+####################
+# unsigned byte 
+####################
+if($type eq "UB" || $type eq "U1" ) { return "Byte"; }
+
+####################
+# unsigned integer 
+####################
+if( $type eq "UI320"  || $type eq "UI" ||
+    $type eq "ULI320" || $type eq "U"     ) { return "UnsignedInt"; }
+
+
+if( $type =~ /^U\d\d+$/ ) { 
+
+    ###################################
+    # check to be sure it's big-endian
+    ###################################
+    my $big_endian_type="U";
+
+    my $i;
+    for($i=1; $i <= length($type)-1; $i++) {
+        $big_endian_type .= $i;
+    }
+
+    if( $type eq $big_endian_type ) { return "UnsignedInt"; }
+
+}
+
+####################
+# signed integer 
+####################
+if( $type eq "SI320"  || $type eq "SI" ||
+    $type eq "SLI320" || $type eq "I"     ) { return "Int"; }
+
+
+if( $type =~ /^S\d\d+$/ ) { 
+
+    ###################################
+    # check to be sure it's big-endian
+    ###################################
+    my $big_endian_type="S";
+
+    my $i;
+    for($i=1; $i <= length($type)-1; $i++) {
+        $big_endian_type .= $i;
+    }
+
+    if( $type eq $big_endian_type ) { return "Int"; }
+
+}
+
+
+###################
+# float and double
+###################
+if( $type eq "SFP320" || $type eq "F1234"     ) { return "Float"; }
+if( $type eq "DFP320" || $type eq "F12345678" ) { return "Double"; }
+
+
+#####################
+# unknown type
+#####################
+die "Can't determine read/write method name for $type\n";
+
+} # end of read_write_base function
+
+
+    
+
+#############################################################################
+# determine the base name of the read or write method
+# appropriate for this data type
+#############################################################################
+sub read_write {
+
+my $name = shift;
+my $action = shift || die "improper syntax for call to read_write";
+
+my ($stream) = $action =~ /^(.)/;
+
+my $method = read_write_base($type{$name});
+
+
+if($method eq "class" ) {
+    ######################################################
+    # read the DataBlock class using its own read method
+    ######################################################
+    return "_${name}->$action($stream)";
+}
+
+#######################################################
+# prepend w->write or r->read to the base method name
+######################################################
+$method= "${stream}->${action}" . $method;
+
+##############################################
+# should we read as bits instead of as bytes?
+##############################################
+my $length = $size{$name};
+if( $size{$name} %8 ) {
+    ########################################
+    # data has an odd size so read as bits
+    ########################################
+    if( $method =~ /Unsigned/ ) { $method =~ s/Int/Bits/; }
+    else                        { $method =~ s/Int/UnsignedBits/; }
+
+} else {
+    ############################
+    # read as bytes
+    ############################
+    $length /= 8;
+}
+
+
+
+#################################################
+# apend an open paren to start the argument list
+#################################################
+$method .= "(";
+
+
+#######################################################
+# add the variable name if we are writing
+#######################################################
+if($action eq "read" ) {
+    $method = "_${name} = " . $method;
+
+} elsif($action eq "write") {
+
+    $method .= "_${name}";
+
+} else { die "unknown action $action"; }
+
+##########################################
+# now add the field length if we need to 
+##########################################
+if($method =~ /Int/ || $method =~ /Bits/) { 
+
+    if($action eq "write" ) { $method .= ","; }
+
+    $method .= "$length"; 
+}
+
+#########################################
+# finally the close paren
+#########################################
+$method .= ")";
+
+return $method;
+
+} # end of read_write function

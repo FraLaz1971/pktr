@@ -1,0 +1,44 @@
+#! /aps/tools/squirt/squirt
+#############################################################################
+# this script determines the min and max secondary header time in a packet 
+# stream. It operates on all packet types including ldp and head3 packets.
+#############################################################################
+
+##########################################################
+# mark that we have not yet initialized the min/max times
+##########################################################
+init: $time_init=0;
+init: $min_valid_time=1000.;
+
+$good_time = %head2 && %time2 >= $min_valid_time;
+
+$need_to_init = !$time_init && $good_time;
+
+######################################
+# make some sanity checks
+######################################
+(!%head2 && %apid < 2045) && "Warning[$packet] unknown APID %apid\n";
+
+#########################################
+# initialize the times if need be
+#########################################
+$need_to_init && ($max = %time2);
+$need_to_init && ($min = %time2);
+$need_to_init && ($time_init=1);
+
+###########################################################
+# keep a running min and max of the time in HEAD2 packets
+###########################################################
+($good_time && %time2 > $max) && ($max = %time2);
+($good_time && %time2 < $min) && ($min = %time2);
+
+################################################################
+# print the earliest and latest times for all the head2 packets
+################################################################
+after: $duration = $max - $min;
+after: "$min $max duration=$duration\n";
+
+###########################################
+# only keep packets with secondary headers
+###########################################
+filter: 0;

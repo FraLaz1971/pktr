@@ -1,0 +1,51 @@
+#! /usr/bin/perl 
+
+############################################################################
+# this script fixes LDPs with inconsistent IDs in their page1s
+# by always using the second page1.
+# This requires two passes through the data, so this is a perl script
+# which first calls the squirt script find_bad_page1s, and then uses
+# this to write a squirt script which will actually make the changes
+############################################################################
+
+my $infile = shift;
+my $outfile = shift;
+
+unless($outfile) {
+    print STDERR "Usage: $0 infile outfile\n";
+    exit 1;
+}
+
+#my $script = "/tmp/script$$.tmp";
+my $script = "script.tmp";
+unlink $script;
+
+open THING, "find_bad_page1s< $infile 2>&1 |";
+open SCRIPT, ">$script";
+
+print "making first pass\n";
+while(<THING>) {
+
+    if(/Warning/) {
+        print;
+        next;
+    }
+
+    chomp;
+    my ($packet, $target, $obs) = split /\s+/, $_;
+
+    print SCRIPT "(\$packet == $packet ) && (\%U[2,8]  = $obs );\n";
+    print SCRIPT "(\$packet == $packet ) && (\%U[3,24] = $target );\n";
+    print SCRIPT "\n";
+    
+
+}
+
+close SCRIPT;
+
+print "making second pass\n";
+system("squirt $script < $infile > $outfile");
+
+#unlink $script;
+
+exit 0

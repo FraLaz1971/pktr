@@ -1,0 +1,133 @@
+# uncomment these two lines if you are using an older compiler without <sstream>
+#OLD_COMPILER_INC = -I.
+#OLD_COMPILER_INSTALL = cp sstream $(INCLUDE)
+
+CCFLAGS = -Wall $(OLD_COMPILER_INC)
+
+CXX=g++
+DB2CC=./db2class
+
+INSTALL_DIR=..
+
+BIN=$(INSTALL_DIR)/bin
+DOC=$(INSTALL_DIR)/doc
+LIB=$(INSTALL_DIR)/lib
+INCLUDE=$(INSTALL_DIR)/include
+
+TEST=../test
+
+LIBRARY_NAME=packets
+LIBRARY=lib$(LIBRARY_NAME).a
+
+
+DBSOURCES= CCSDSHead.cc SwiftTimeBlock.cc SwiftHead2.cc SwiftHead3.cc \
+           LDPHead3.cc LDPTrailer.cc StandardLDPHead.cc \
+           ITOSAnnotation.cc ACS.cc BATLDPHead.cc
+
+DBCLASSES = CCSDSHead.o  SwiftHead2.o SwiftTimeBlock.o SwiftHead3.o \
+            LDPHead3.o LDPTrailer.o StandardLDPHead.o \
+            ITOSAnnotation.o ACS.o BATLDPHead.o
+
+IO_CLASSES = Interpreter.o Reader.o Writer.o DataBuf.o
+BLOCK_CLASSES = DataBlock.o RawDataBlock.o SwiftTime.o
+PACKET_CLASSES = CCSDSPacket.o SwiftPacket.o SwiftHead3Packet.o \
+                 LDPPacket.o ChecksumLDPPacket.o
+PIPE_CLASSES = PacketPipe.o  PacketReader.o PacketWriter.o PacketTank.o \
+               PacketTee.o PacketCounter.o FlowProbe.o PacketFilter.o \
+               APIDFilter.o PacketDeleter.o LDPChecksumFilter.o TimeFilter.o
+
+LDP_CLASSES = LDPBuffer.o LDPEncodeBuffer.o LDPChecker.o
+UVOT_SEG_CLASSES = CCSDSSegmenter.o SegmentAssembler.o CCSDSMerger.o
+
+SORTING_CLASSES = APIDentifier.o SwiftTypedPacketReader.o File.o \
+                  PacketBinner.o LDPPacketBinner.o Head3PacketBinner.o \
+                  TimeInterval.o TimeLine.o TimePacketBinner.o \
+                  ACSPacketBinner.o TimeLineUpdater.o ACSTimeLineUpdater.o \
+                  TDRSSPacketBinner.o APIDPacketBinner.o DailyPacketBinner.o  \
+                  Head3TimePacketBinner.o
+
+
+INTERFACE_CLASSES = UserInterface.o CommandLineUI.o
+
+CHECKSUM_CLASSES = Checksummer.o LDPChecksummer.o
+
+ID_CLASSES = SwiftIDSetter.o SwiftIDCounter.o
+
+LDP_INDEX_CLASSES = Sequence.o LDPPacketStub.o LDPStub.o LDPStubRepository.o \
+                    LDPStubPacketBinner.o
+                  
+
+CLASSES=$(DBCLASSES) \
+        $(IO_CLASSES) \
+        $(BLOCK_CLASSES) \
+        $(PACKET_CLASSES) \
+        $(PIPE_CLASSES) \
+        $(LDP_CLASSES) \
+        $(UVOT_SEG_CLASSES) \
+        $(SORTING_CLASSES) \
+        $(INTERFACE_CLASSES) \
+        $(CHECKSUM_CLASSES) \
+        $(ID_CLASSES) \
+	$(LDP_INDEX_CLASSES)
+
+
+TOOLS = encode_ldp decode_ldp read_ldp_head \
+        bin_packets sort_packets count_packets \
+        get_ldp_filename is_ccsds strip_annotation \
+        update_timeline \
+        head2_sort merge_timelines fake_acs split_by_apid \
+	bin_packets_by_timeline ldp_checksum_filter some_packets
+
+all:	$(DBSOURCES) $(LIBRARY) $(TOOLS)
+
+
+install:	all
+		mv $(TOOLS) ${BIN}
+		rm -f *.o *.html
+		cp *.h $(INCLUDE)
+		mv $(LIBRARY) $(LIB)
+		$(OLD_COMPILER_INSTALL)
+
+soft:	all
+		cp $(TOOLS) ${BIN}
+		cp *.h $(INCLUDE)
+		cp $(LIBRARY) $(LIB)
+		$(OLD_COMPILER_INSTALL)
+
+
+classes:	$(DBSOURCES)
+
+doc:	
+	rm -f $(DOC)/*
+	./cppdoc
+	./tooldoc
+	mv *.html $(DOC)
+
+clear:	
+	rm -f $(DBSOURCES) $(CLASSES) $(TOOLS)  $(LIBRARY) *.html \
+        $(LIB)/* $(BIN)/* $(INCLUDE)/*
+
+clear_tools:
+	rm -f $(TOOLS)
+
+distprep:	clear classes doc
+		rm -f *% core
+		rm -f $(TEST)/*% $(TEST)/core
+		rm -f ../*%
+
+test:	all
+	cd $(TEST); ./check
+	
+
+$(LIBRARY):	$(CLASSES)
+		ar -r $(LIBRARY) $(CLASSES)
+
+
+.cc:	$(CLASSES) $$@.cc 
+	$(CXX) -o $@ $< -L. -l$(LIBRARY_NAME) $(CCFLAGS)
+
+%.cc:	%.db $(DB2CC)
+	$(DB2CC) $<
+
+%.o:	%.cc %.h
+	$(CXX) -c $< $(CCFLAGS)

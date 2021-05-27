@@ -1,0 +1,50 @@
+#! /aps/tools/squirt/squirt
+
+##########################################################
+# mark that we have not yet initialized the min/max times
+##########################################################
+init: $time_init=0;
+
+###########################################
+# determine characteristics of the packet
+###########################################
+$segmented = %apid==704 || (%apid>=768 && %apid<=771)
+                        || %apid==774 || %apid==780;
+
+$is_hk = %head2 && !%head3 && !%ldp && !$segmented;
+$need_to_init = !$time_init && $is_hk;
+
+######################################
+# make some sanity checks
+######################################
+(!%head2 && %apid < 2045) && "Warning[$packet] unknown APID %apid\n";
+
+$bad_time = %head2 && %time2 < 1000.;
+$bad_time && "Warning[$packet] APID=%apid sequence=%sequence time2=%time2\n";
+
+$bad_time && ($is_hk=0);
+$bad_time && ($need_to_init=0);
+
+#########################################
+# initialize the times if need be
+#########################################
+$need_to_init && ($max = %time2);
+$need_to_init && ($min = %time2);
+$need_to_init && ($time_init=1);
+
+###########################################################
+# keep a running min and max of the time in HEAD2 packets
+###########################################################
+($is_hk && %time2 > $max) && ($max = %time2);
+($is_hk && %time2 < $min) && ($min = %time2);
+
+################################################################
+# print the earliest and latest times for all the head2 packets
+################################################################
+after: $duration = $max - $min;
+after: "$min $max duration=$duration\n";
+
+###########################################
+# only keep packets with secondary headers
+###########################################
+filter: 0;

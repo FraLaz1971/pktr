@@ -1,0 +1,255 @@
+# apid|type|comments
+
+###############
+# ACS
+###############
+303 acs ACS packets echoed by BAT - this APID likely to change
+
+##############################
+# Spacecraft HK
+##############################
+0 head2 Spacecraft hardware SOH
+1 head2 Spacecraft hardware SOH
+2 head2 Spacecraft hardware SOH
+3 head2 Spacecraft hardware SOH
+4 head2 Spacecraft hardware SOH
+5 head2 Spacecraft hardware SOH
+
+8 head2 Spacecraft HK
+9 head2 Spacecraft HK
+10 head2 Spacecraft HK
+11 head2 Spacecraft HK
+12 head2 Spacecraft HK
+
+13 head2 UDL HK
+
+16 head2 S/C FSW SOH
+17 head2 S/C FSW SOH
+18 head2 S/C FSW SOH
+19 head2 S/C FSW SOH
+20 head2 S/C FSW SOH
+
+25 head2 ACS HK
+26 head2 ACS HK
+
+40 head2 Event HK
+
+41 head2 ???
+45 head2 ???
+46 head2 ???
+
+51 head2 ???? added for MRT2
+52 head2 ???? added for MRT2
+55 head2 ???? added for MRT2
+
+
+####################
+# BAT
+####################
+290 head2 ????
+291 head2 realtime software event
+296 head2 CDH CompHub Shell Stream
+297 head2 CDH CompHub Debug Stream
+304 head2 RT CDH Housekeeping -- HK_ENG_PKT_01_AID
+305 head2 RT CDH Combined Housekeeping Packet - HK_ENG_PKT_02_AID
+306 head2 RT CDH Combined Housekeeping Packet - HK_ENG_PKT_03_AID
+307 head2 RT CDH Combined Housekeeping Packet - HK_ENG_PKT_04_AID
+308 head2 RT CDH Housekeeping -- HK_ENG_PKT_05_AID
+309 head2 RT CDH Housekeeping -- HK_ENG_PKT_06_AID
+310 head2 RT CDH Housekeeping -- HK_ENG_PKT_07_AID
+311 head2 RT CDH Housekeeping -- HK_ENG_PKT_08_AID
+312 head2 RT CDH Housekeeping -- HK_SCI_PKT_01_AID
+313 head2 RT CDH Housekeeping -- HK_SCI_PKT_02_AID
+314 head2 RT CDH Housekeeping -- HK_SCI_PKT_03_AID
+315 head2 RT CDH Housekeeping -- HK_GENERIC_PKT_AID
+
+334 head2 about to slew ?
+335 head2 done slewing  ?
+
+337 head3 Realtime rates
+338 head3 Mask-Tagged rates
+
+339 head2 FOM info?
+
+340 head2 RT  DI Science commandable parameters packet -- SCI_DIPARAMS_R_AID
+
+341 head2 ?????
+
+
+369 head2 RT CDH Housekeeping -- HK_MEM_PKT_01_AID
+371 head2 RT CDH Housekeeping -- HK_MEM_PKT_03_AID
+372 head2 RT CDH Housekeeping -- HK_MEM_PKT_04_AID
+373 head2 RT CDH Housekeeping -- HK_MEM_PKT_05_AID
+374 head2 RT CDH Housekeeping -- HK_MEM_PKT_06_AID
+375 head2 RT CDH Housekeeping -- HK_MEM_PKT_07_AID
+376 head2 RT CDH Housekeeping -- HK_MEM_PKT_08_AID
+
+384 head2 ????
+385 head3 BAT TDRSS Burst Position  Ack 
+386 head3 BAT TDRSS Burst Nack (no image trigger)
+387 head3 BAT TDRSS light curve 
+
+400 head2 FoM 2 Observe AT Target msg PKT - TDRS_FOM_OBS_AT_AID
+416 head2 ????
+
+480 head2 ????
+485 head2 ????
+
+488 head3 Realtime rates, Hi-priority SSR
+489 head3 Mask-Tagged rates, Hi-priority SSR
+491 head3 Maximum Count rates, Hi-priority SSR
+
+492 head2 DI Science commandable parameters packet -- SCI_DIPARAMS_H_AID
+
+494 head2 not sure it is a head2
+
+526 ldp BAT LDP 1
+527 ldp BAT LDP 2 (Burst data?)
+528 ldp BAT LDP 3 (Survey data?)
+567 ldp BAT LDP 4
+
+529 head3 Mask-tagged rates - real time channel
+530 head3 Max-Count Rates - Lo-priority SSR
+
+533 head2 ??? IMAGE_RESULT
+534 head2 ???
+538 head2 SCI_DSP_MASK_WEIGHTS_RESULT
+540 head2 SCI_DSP_APID_RESULT_DEBUG
+
+
+
+
+##############################
+# UVOT science data
+##############################
+704 uvot Segmented UVOT Parameterized Finding Chart
+
+768 uvot Segmented Uncompressed UVOT Image Data
+769 uvot Segmented Compressed UVOT Image Data
+770 uvot Segmented Uncompressed UVOT Event Data
+771 uvot Segmented Compressed UVOT Event Data
+
+774 uvot  Segmented UVOT Raw Event Engineering Data
+776 head3 Channel Boundary Data
+780 uvot  Segmented UVOT Centroid Confirmation
+782 head3 UVOT Intensifier Characteristics
+790 head2 UVOT DPU DPA Startup Configuration -ignore invalid head3
+
+848 head3 UVOT Exposure end
+850 head3 UVOT Exposure start
+
+852 head3 Merged UVOT Raw Event Engineering Data
+853 head3 Merged UVOT Parameterized Finding Chart
+854 head3 Merged UVOT Centroid Confirmation
+855 head3 Merged UVOT Uncompressed Image Data
+856 head3 Merged UVOT Compressed Image Data
+857 head3 Merged UVOT Uncompressed Event Data
+858 head3 Merged UVOT Compressed Event Data
+
+
+###############################
+# UVOT HK
+################################
+576 head2 UVOT DPU 0x240 Startup Packet
+578 head2 UVOT DPU 0x242 Startup Packet.
+580 head2 UVOT DPU 0x244 Startup Packet
+584 head2 UVOT DPU 0x248 Startup Packet
+588 head2 UVOT DPU 0x24c Startup Packet.
+590 head2 UVOT DPU 0x24e Startup Packet.
+603 head2 UVOT DPU 0x25b Download Packet.
+605 head2 UVOT DPU 0x25d Download Packet.
+672 head2 UVOT DPU 0x2A0 Startup Packet
+674 head2 UVOT DPU 0x2A2 Startup Packet
+676 head2 UVOT DPU 0x2A4 Startup Packet
+680 head2 UVOT DPU 0x2A8 Startup Packet
+684 head2 UVOT DPU 0x2AC Startup Packet.
+864 head2 Housekeeping Record for Basic
+865 head2 Copy of TDRSS Emergency Report sent to Telemetry
+866 head2 Housekeeping Record for Oper
+880 head2 Successful Acceptance
+881 head2 Unsuccessful Acceptance
+882 head2 Unsuccessful Execution
+883 head2 NHK Event
+884 head2 NHK Error
+885 head2 NHK Major Anomaly
+886 head2 SC1553 Error Dump
+887 head2 Boot report
+888 head2 Boot dump 0
+889 head2 Boot dump 1
+890 head2 Boot dump 2
+891 head2 Boot dump 3
+892 head2 Boot dump 4
+893 head2 Boot dump 5
+894 head2 Boot dump 6
+895 head2 Boot dump 7
+897 head2 DPU Heartbeat
+900 head2 DPU Mode Ready Message
+901 head2 DPU Mode Complete Message
+902 head2 iDPU Calculated Channel Boundaries
+905 head2 DPU Boot Complete
+906 head2 Start of DPU Upload
+907 head2 End of DPU Upload
+911 head2 ACK/NAK Message
+912 head2 no description
+913 head2 no description
+928 head2 Bright Star Report
+929 head2 Too Many Accumulated Counts Report
+930 head2 Catalogue Star Report
+944 head2 ICB Read Report
+959 head2 Printf packet
+960 head2 TDRSS Emergency Report
+961 head2 TDRSS copy of HK
+962 head2 no description
+963 head2 no description
+1104 head2 no description
+1105 head2 no description
+
+1124 head2 ???? added for MOC test
+
+
+############################
+# XRT HK packets
+############################
+1152 head3 XRT Startup
+1153 head3 XRT Memory Status
+1154 head3 XRT Task Status
+1155 head3 XRT Errors/Events
+1156 head3 XRT Analog HK
+1157 head3 XRT Periodic Processing
+1158 head3 XRT Mode Change
+1159 head3 XRT Memory Dump
+1160 head3 XRT Command Statistics
+1161 head3 XRT Command Echo
+1162 head3 XRT Telemetry Test
+1163 head3 XRT Tube Heater Control
+1164 head3 XRT CCD Interface
+
+1165 head3 XRT TEC PS Status
+1166 head3 XRT BHC Status
+
+1248 head3 XRT TDRSS Position
+1249 head3 XRT TDRSS Spectrum
+1250 head3 XRT TDRSS Image
+1264 head3 XRT TDRSS Centroiding Error
+1280 head3 XRT TDRSS Emergency
+
+1328 head3 XRT TDRSS Startup
+1329 head3 XRT TDRSS Memory Status
+1330 head3 XRT TDRSS Task Status
+1331 head3 XRT TDRSS Errors/Events
+1332 head3 XRT TDRSS Analog HK
+1333 head3 XRT TDRSS Periodic Processing
+1334 head3 XRT TDRSS Mode Change
+1335 head3 XRT TDRSS Memory Dump
+1336 head3 XRT TDRSS Command Statistics
+1337 head3 XRT TDRSS Command Echo
+1338 head3 XRT TDRSS Telemetry Test
+1339 head3 XRT TDRSS Tube Heater Control
+1340 head3 XRT TDRSS CCD Interface
+
+1344 checksum XRT science packets
+
+1348 head2 ????
+
+1799 head2 ???? added for MOC test
+

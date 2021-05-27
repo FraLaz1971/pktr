@@ -1,0 +1,61 @@
+#! /aps/tools/squirt/squirt
+##############################################################################
+# This script extracts the obs/target IDs from LDPs and HEAD3 packets in
+# the telemetry. It only prints an ID when it is different from the 
+# previous one read. No data are passed through to stdout.
+#
+##############################################################################
+
+init: $old_target=-1;
+init: $old_obs = -1;
+init: $obs=$old_obs;
+init: $target = $old_target;
+
+#########################################
+# check for unknown APIDS
+#########################################
+(!%head2 && %apid<2045) && "Warning[$packet] unknown APID %apid\n";
+
+
+
+###############################################################
+# if this is page 1 of an LDP, get the ID from the packet data
+###############################################################
+$page1=%ldp && %page==1;
+$page1 && ($obs = %U[2,8]);
+$page1 && ($target = %U[3,24]);
+
+################################################################
+# if this is a head3 packet, get the ID from the packet header 
+################################################################ 
+%head3 && ($target= %target);
+%head3 && ($obs   = %obs);
+
+########################################################################
+# is this a UVOT segmented packet?
+# if so, we have to look into the data of the first packet of a group
+#######################################################################
+$segmented = %apid==704 || (%apid>=768 && %apid<=771)
+                        || %apid==774 || %apid==780;
+
+($segmented && %first) && ($obs    = %U[0, 8]);
+($segmented && %first) && ($target = %U[1,24]);
+
+
+############################
+# see if the ID has changed
+############################
+$changed = $obs != $old_obs || $old_target != $target;
+
+#########################################
+# print the new ID if it has changed
+# and remember it as the old one
+#########################################
+$changed && "APID=%apid target=$target obs=$obs\n";
+$changed && ($old_target=$target);
+$changed && ($old_obs = $obs);
+
+##############
+# no output
+##############
+filter: 0; 

@@ -1,0 +1,11 @@
+/******************************************************************************
+* This is for backwards compatibility with older compilers without stringstream
+* This file will be ignored if the system has a sstream include file
+*
+******************************************************************************/
+
+#include <strstream>
+#define  ostringstream ostrstream
+#define  istringstream istrstream
+
+#define FAKING_STRINGSTREAM 1

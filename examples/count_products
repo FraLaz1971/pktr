@@ -1,0 +1,21 @@
+#! ../squirt
+###############################################################################
+# This script counts the number of different LDP products present in a file.
+# it ignores non-LDP packets but assumes that there is a new LDP every time
+# the product number changes between sequential packets
+#
+# It prints the human readable results to stderr. The script
+# produces no packet output (i.e. all packets are removed from the stream.
+# There are no command line arguments.
+#
+###############################################################################
+
+init: $count=0;
+init: $product = -1;
+
+(!%ldp || $product == %product) || ($count = $count + 1);
+(!%ldp || $product == %product) || ($product=%product);
+
+filter: 0; # produce no output
+
+after: "$count products\n";

@@ -1,0 +1,8 @@
+#! /aps/tools/squirt/squirt
+
+init: $target=$1;
+
+$page1 = %ldp && %page == 1;
+
+$page1 && (%U[3,24] = $target);
+%head3 && (%target  = $target);

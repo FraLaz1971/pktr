@@ -1,0 +1,19 @@
+# apid|type|comments
+
+768 uvot Raw UVOT Image Data
+770 uvot Raw UVOT Event Data
+
+769 uvot Merged UVOT Image Data - tentative
+771 uvot Merged UVOT Event Data - tentative
+
+580 head2 UVOT DPU HK packet
+584 head2 UVOT DPU HK packet
+590 head2 UVOT DPU Event Error
+897 head2 UVOT DPU Hearbeat
+900 head2 UVOT DPU Mode Ready
+901 head2 UVOT DPU Mode Complete
+911 head2 UVOT DPU Ack/Nack
+
+
+605 head2 UVOT memory dump?????
+289 head2 UVOT memory dump?????

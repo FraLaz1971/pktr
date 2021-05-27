@@ -1,0 +1,12 @@
+########################################################################
+# This is an ITOS-like database definition for a Swift secondary header
+########################################################################
+
+# Define delimiter
+DEL,|
+
+#
+# Define each data field with the following format:
+#PKT|APID|Mnemonic||+||type|start byte|start bit|size in bits|||description|
+
+PKT||time ||+||cSwiftTime | 0| 0|  48|||"Packet creation time"|

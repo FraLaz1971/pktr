@@ -1,0 +1,79 @@
+########################################################################
+# This is an ITOS-like database definition for a Swift XRT
+# Large Data Product CCD frame header.
+########################################################################
+
+# Define delimiter
+DEL,|
+
+#
+# Define each data field with the following format:
+#PKT|APID|Mnemonic||+||type|start byte|start bit|size in bits|||description|
+
+PKT|1344|frameHeaderID||+||U1234| | |32|||"Indicates Start Of CCD Frame Header"
+PKT|1344|ccdFrameCnt  ||+||U1234| | |32|||"Sequentially Number Each CCD Frame"
+PKT|1344|ObsNumber    ||+||U1234| | |32|||"Observation Number"
+PKT|1344|degreeRA     ||+||F1234| | |32|||"Right Ascention of this Frame"
+PKT|1344|degreeDec    ||+||F1234| | |32|||"Declination of this Frame"
+PKT|1344|degreeRoll   ||+||F1234| | |32|||"Roll angle of this Frame"
+PKT|1344|xPosTAMImage1||+||U12| | |16|||"X Position of TAM Image 1"
+PKT|1344|yPosTAMImage1||+||U12| | |16|||"Y Position of TAM Image 1"
+PKT|1344|xPosTAMImage2||+||U12| | |16|||"X Position of TAM Image 2"
+PKT|1344|yPosTAMImage2||+||U12| | |16|||"Y Position of TAM Image 2"
+
+PKT|1344|frameStartTime||+||cSwiftTime| | |48|||"S/C Time at Start of CCD Frame"
+PKT|1344|frameStopTime ||+||cSwiftTime| | |48|||"S/C Time at End of CCD Frame"
+
+PKT|1344|ccdExposure||+||U12| | |16|||"CCD Exposure Time (TBD units)"
+PKT|1344|lowerLevelThreshold||+||U12| | |16|||"Pixel Threshold used for this Frame"
+PKT|1344|greaterThanLLDCnt||+||U1234| | |32|||"Pixels greater than Lower Level Discriminator count"
+PKT|1344|upperLevelThreshold||+||U12| | |16|||"Cut off pixel Threshold used for this frame"
+PKT|1344|greaterThanULDCnt||+||U1234| | |32|||"Pixels greater than Upper Level Discriminator count"
+PKT|1344|ccdTemperature||+||U12| | |16|||"CCD Temperature for this Frame"
+PKT|1344|acsBilevelFlags||+||UB| | |8|||"ACS Bilevel Flags"
+PKT|1344|xrtStateFlags||+||UB| | |8|||"XRT State Flags"
+PKT|1344|xrtMode||+||UB| | |8|||"XRT Mode"
+PKT|1344|ccdWaveform||+||U12| | |16|||"Unique ID of CCD Waveform used"
+PKT|1344|voltVod1||+||U12| | |16|||"Output Drain Voltage for Amp 1 (left amp)"
+PKT|1344|voltVod2||+||U12| | |16|||"Output Drain Voltage for Amp 2 (right amp)"
+PKT|1344|voltVrd1||+||U12| | |16|||"Reference Voltage for Amp 1"
+PKT|1344|voltVrd2||+||U12| | |16|||"Reference Voltage for Amp 2"
+PKT|1344|voltVog1||+||U12| | |16|||"Output Gate Voltage for Amp 1"
+PKT|1344|voltVog2||+||U12| | |16|||"Output Gate Voltage for Amp 2"
+PKT|1344|volt1Rp1||+||U12| | |16|||"Serial Register clock phase 1 (left half)"
+PKT|1344|volt1Rp2||+||U12| | |16|||"Serial Register clock phase 2 (left half)"
+PKT|1344|volt1Rp3||+||U12| | |16|||"Serial Register clock phase 3 (left half)"
+PKT|1344|volt1pR||+||U12| | |16|||""Reset Gate Clock"
+PKT|1344|volt2pR||+||U12| | |16|||""Reset Gate Clock"
+PKT|1344|volt2Rp1||+||U12| | |16|||"Serial Register clock phase 1 (right half)"
+PKT|1344|volt2Rp2||+||U12| | |16|||"Serial Register clock phase 2 (right half)"
+PKT|1344|volt2Rp3||+||U12| | |16|||"Serial Register clock phase 3 (right half)"
+PKT|1344|voltVgr||+||U12| | |16|||"Guard Ring Bias Voltage"
+PKT|1344|voltVsub||+||U12| | |16|||"Substrate Bias Voltage"
+PKT|1344|voltVbackjun||+||U12| | |16|||"Back Junction Bias Voltage"
+PKT|1344|voltVid||+||U12| | |16|||"Input Diode Bias Voltage"
+PKT|1344|voltIp1||+||U12| | |16|||"Image Area Parallel Clock Phase 1"
+PKT|1344|voltIp2||+||U12| | |16|||"Image Area Parallel Clock Phase 2"
+PKT|1344|voltIp3||+||U12| | |16|||"Image Area Parallel Clock Phase 3"
+PKT|1344|voltSp1||+||U12| | |16|||"Framestore Area Parallel Clock Phase 1"
+PKT|1344|voltSp2||+||U12| | |16|||"Framestore Area Parallel Clock Phase 2"
+PKT|1344|voltSp3||+||U12| | |16|||"Framestore Area Parallel Clock Phase 3"
+PKT|1344|voltpiG||+||U12| | |16|||"Input Gate Clock"
+PKT|1344|spareHK||+||U12| | |16|||"Spare HK slot"
+
+#################################################
+# items meaningful only in photon counting mode
+#################################################
+PKT|1344|splitThreshold||+||U12| | |16|||"Split Threshold (PC mode)"
+PKT|1344|singlePixEvtCnt||+||U12| | |16|||"Number of Single Pixel Events (PC mode)"
+PKT|1344|singleSplitPixEvtCnt||+||U12| | |16|||"Number of Singly-Split Events (PC mode)"
+PKT|1344|threePixEvtCnt||+||U12| | |16|||"Number of Three Pixel Events (PC mode)"
+PKT|1344|fourPixEvtCnt||+||U12| | |16|||"Number of Four Pixel Events (PC mode)"
+
+###############################
+# zero padding
+###############################
+PKT|1344|spares0||+||UB| | |16|||"Filler"
+PKT|1344|spares1||+||UB| | |16|||"Filler"
+PKT|1344|spares2||+||UB| | | 8|||"Filler"
+

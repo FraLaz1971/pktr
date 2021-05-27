@@ -1,0 +1,1112 @@
+#! /usr/bin/perl -w
+
+use strict;
+
+########################################
+# extract classes from all header files
+########################################
+my @classes = ();
+my $header;
+for $header (glob("*.h")) {
+#for $header ("LDPEncodeBuffer.h") {
+
+    push @classes, process_header($header);
+
+}
+
+
+######################################
+# make HTML pages for all the classes
+######################################
+my $class;
+foreach $class (@classes) {
+
+    print_class_page($class);
+    
+} 
+
+make_tree_index(@classes);
+make_alphabetic_index(@classes);
+
+
+
+exit 0;
+
+##############################################################################
+# make simple alphabetic index of classes
+##############################################################################
+sub make_alphabetic_index {
+
+my @classes = @_;
+
+###########################################
+# open the file and print the HTML header
+###########################################
+open  INDEX, ">class_index.html";
+print INDEX "<HTML><HEAD><TITLE>Class Index</TITLE></HEAD>\n";
+print INDEX "<BODY BGCOLOR=\"white\">\n";
+
+print INDEX "<CENTER>\n";
+print INDEX "Alphabetic Class Index\n";
+print INDEX "&nbsp;&nbsp;|&nbsp;&nbsp;\n";
+print INDEX "<A HREF=\"tree.html\">Class Inheritance Tree Index</A>\n";
+print INDEX "&nbsp;&nbsp;|&nbsp;&nbsp;\n";
+print INDEX "<A HREF=\"tool_index.html\">Tool Index</A>\n";
+print INDEX "</CENTER>\n";
+print INDEX "<HR>\n";
+
+
+print INDEX "<CENTER><H1>Class Index</H1></CENTER>\n";
+
+print INDEX "<UL>\n";
+
+
+foreach $class (sort {$a->{NAME} cmp $b->{NAME} } @classes) {
+
+    print INDEX "<LI> <A HREF=\"$class->{NAME}.html\">$class->{NAME}</A>\n";
+
+}
+
+print INDEX "</UL>\n";
+
+print INDEX "<HR>\n";
+print INDEX "<CENTER>\n";
+print INDEX "Alphabetic Class Index\n";
+print INDEX "&nbsp;&nbsp;|&nbsp;&nbsp;\n";
+print INDEX "<A HREF=\"tree.html\">Class Inheritance Tree Index</A>\n";
+print INDEX "&nbsp;&nbsp;|&nbsp;&nbsp;\n";
+print INDEX "<A HREF=\"tool_index.html\">Tool Index</A>\n";
+print INDEX "</CENTER>\n";
+
+print INDEX "</BODY></HTML>\n";
+
+close INDEX;
+
+} # end of make_alphabetic_index function
+
+
+##############################################################################
+# make an index to all classes showing the inheritance hierarchy
+##############################################################################
+sub make_tree_index {
+
+my @classes = @_;
+
+###########################################
+# open the file and print the HTML header
+###########################################
+open  TREE, ">tree.html";
+print TREE "<HTML><HEAD><TITLE>Class Inheritance Tree</TITLE></HEAD>\n";
+print TREE "<BODY BGCOLOR=\"white\">\n";
+
+print TREE "<CENTER>\n";
+print TREE "<A HREF=\"class_index.html\">Alphabetic Class Index</A>\n";
+print TREE "&nbsp;&nbsp;|&nbsp;&nbsp;\n";
+print TREE "Class Inheritance Tree Index\n";
+print TREE "&nbsp;&nbsp;|&nbsp;&nbsp;\n";
+print TREE "<A HREF=\"tool_index.html\">Tool Index</A>\n";
+print TREE "</CENTER>\n";
+print TREE "<HR>\n";
+
+
+print TREE "<CENTER><H1>Class Inheritance Tree</H1></CENTER>\n";
+
+print TREE "<UL>\n";
+
+#########################################################
+# get a list of the names of all base classes
+# and remove those base classes from the list of classes
+#########################################################
+my @base_classes = grep {!$_->{PARENT} } @classes;
+my @parents = map {$_->{NAME}} @base_classes;
+
+@parents = sort @parents;
+
+#foreach (@parents) { print "base class $_\n"; }
+
+#######################################################
+# now make a unique list of the unknown parent classes
+#######################################################
+my $classes;
+my %unknown =();
+foreach $class (grep {$_->{PARENT}} @classes) {
+
+    my $parent = $class->{PARENT};
+    unless(grep {$_->{NAME} eq $parent} @classes ){
+        
+        $unknown{$parent} =1;
+    }
+}
+
+#foreach (sort keys %unknown) { print "unknown parent $_\n"; }
+
+push @parents, sort keys %unknown;
+
+#############################################
+# take out the base classes to make it easier
+# for print_tree_node to search for children
+#############################################
+@classes = grep {$_->{PARENT}} @classes;
+
+
+my $parent;
+foreach $parent (@parents) {
+
+    print_tree_node($parent, @classes);
+
+} 
+
+print TREE "</UL>";
+
+print TREE "<HR>\n";
+print TREE "<CENTER>\n";
+print TREE "<A HREF=\"class_index.html\">Alphabetic Class Index</A>\n";
+print TREE "&nbsp;&nbsp;|&nbsp;&nbsp;\n";
+print TREE "Class Inheritance Tree Index\n";
+print TREE "&nbsp;&nbsp;|&nbsp;&nbsp;\n";
+print TREE "<A HREF=\"tool_index.html\">Tool Index</A>\n";
+print TREE "</CENTER>\n";
+
+print TREE "</BODY></HTML>\n";
+
+} # end of make_tree_index function
+
+
+
+##############################################################################
+# recursive function used to print a tree node and its children
+##############################################################################
+sub print_tree_node {
+
+my $parent = shift;
+my @classes = @_;
+
+print TREE "<LI><A HREF=\"$parent.html\">$parent</A>\n";
+print TREE "<UL>\n";
+
+
+my $class;
+foreach $class (grep {$_->{PARENT} eq $parent} @classes ) {
+
+    print_tree_node($class->{NAME},@classes);
+
+} 
+
+print TREE "</UL>\n";
+
+
+} # end of print_tree_node method
+
+##############################################################################
+# extract all the classes in a given header file
+##############################################################################
+sub process_header {
+
+my $header_file = shift;
+
+
+###################################
+# read the header file
+###################################
+$header = read_file($header_file);
+
+###########################
+# remove comments
+###########################
+my $no_comments=$header;
+$no_comments =~ s|/\*.*?\*/||g;
+
+########################################################################
+# remove any space between semicolon and bracket at the end of a class
+#######################################################################
+$no_comments =~ s/}\s*;/};/g;
+
+###############################################################
+# read the ".cc" file corresponding to this header
+###############################################################
+my $code_file = $header_file;
+$code_file =~ s/.h$/.cc/;
+my $code = read_file($code_file);
+
+my $method_descriptions = {};
+
+my @codes = split /\/\*+/, $code;
+
+foreach $code (@codes) {
+
+    my ($description, $name) = $code =~ m|(.*?)\*+/\s*(.*?\))\s*|;
+
+    unless(defined $name) { next; }
+
+    $description =~ s/^\s*//;
+    $description = ucfirst($description);
+    unless($description =~ /\.$/ || $description =~ m|</UL>$|) { 
+        $description .= '.' 
+    }
+
+    $name =~ s/\s+/ /g; # collapse multiple spaces.
+
+    $method_descriptions->{$name} = $description;
+
+    #print "NAME=$name\n";
+    #print "DESCRIPTION=$description\n";
+    #print "----------------------------------------------------\n";
+}
+
+
+###############################################################
+# extract all the classes in the header
+###############################################################
+my ($dummy, @classes) = extract_classes($no_comments, $header, 
+                                        $method_descriptions);
+
+
+return flatten_embedded_tree(@classes);
+
+} # end of process_header function
+
+
+##############################################################################
+# read a file and make certain modifications to it
+##############################################################################
+sub read_file {
+
+my $name = shift;
+
+#print "reading $name\n";
+
+open  FILE, "<$name" || die "could not open $name";
+my @text = <FILE>;
+close FILE;
+
+############################
+# get rid of "//" comments 
+############################
+my $line;
+foreach $line (@text) {
+    $line =~ s|//.*$||;
+}
+
+#############################################
+# prep "box" comments for joining the lines
+#############################################
+my $in_comment=0;
+my $in_list=0;
+foreach $line (@text) {
+
+    if($line =~ m|/\*\*| ) { $in_comment=1;}
+    if($line =~ m|\*\*/| ) { 
+        $in_comment=0;
+        if($in_list) { 
+            $line = "</UL>".$line;
+            $in_list =0;
+        }
+    }
+
+    if($in_comment) { 
+        $line =~ s|^\s*\*+||; 
+        $line =~ s|\*\s*$||;
+
+        if($line =~ /^\s*$/ ) { 
+            if($in_list) {
+                $line="</UL><P>";
+                $in_list=0;
+
+            } else { $line="<P>" }
+        }
+       
+        if( $line =~ s/^\s*-/<LI>/ ) {
+            ####################################
+            # this line is an element in a list
+            ####################################
+            if(!$in_list) { $line = "<UL>".$line }
+            $in_list=1;
+        } else {
+           # if($in_list) {
+           #     $line = "</UL>".$line;
+           #     $in_list=0;
+           # }
+        }
+
+    } # end if in comment
+  
+
+}
+
+
+#####################################
+# join everything together
+#####################################
+chomp(@text);
+
+return join '', @text;
+
+} # end of read_file method
+
+
+
+
+##############################################################################
+# Make the HTML page for a given class
+##############################################################################
+sub print_class_page {
+
+my $class = shift;
+
+print "    Making HTML for $class->{NAME}\n";
+
+########################################
+# open file and print HTML header stuff
+########################################
+open  PAGE, ">$class->{NAME}.html";
+print PAGE "<HTML><HEAD><TITLE>Class $class->{NAME}</TITLE></HEAD>\n";
+print PAGE "<BODY BGCOLOR=\"white\">\n";
+
+print PAGE "<CENTER>\n";
+print PAGE "<A HREF=\"class_index.html\">Alphabetic Class Index</A>\n";
+print PAGE "&nbsp;&nbsp;|&nbsp;&nbsp;\n";
+print PAGE "<A HREF=\"tree.html\">Class Inheritance Tree Index</A>\n";
+print PAGE "&nbsp;&nbsp;|&nbsp;&nbsp;\n";
+print PAGE "<A HREF=\"tool_index.html\">Tool Index</A>\n";
+print PAGE "</CENTER>\n";
+print PAGE "<HR>\n";
+
+##########################################
+# class and parent name
+##########################################
+print PAGE "<H1>Class: $class->{NAME}</H1>\n";
+if($class->{PARENT}) {
+
+    my $name = $class->{PARENT};
+    print PAGE "Parent class: <A HREF=\"$name.html\">$name</a>\n";
+} else {
+    print PAGE "This is a base class.\n";
+}
+print PAGE "<P>";
+
+
+#########################################
+# class description
+#########################################
+print PAGE "<FONT SIZE=+2<<B>Description:</B></FONT><BR>";
+print PAGE "$class->{DESCRIPTION}\n";
+print PAGE "<P>\n";
+
+############################################
+# embedded classes
+############################################
+if(@{$class->{EMBEDDED}}) {
+
+    print PAGE "<FONT SIZE=+2<<B>Embedded Classes:</B></FONT><BR> ";
+    my $line="";
+    my $embedded;
+    foreach $embedded (@{$class->{EMBEDDED}}) {
+
+        my $name = $embedded->{NAME};
+
+        $line .= "<A HREF=\"$name.html\">$name</A>, ";
+    }
+
+    $line =~ s/, $//;
+    print PAGE "$line\n<P>\n";
+}
+
+#############################
+# data
+#############################
+print PAGE "<TABLE BORDER=1 CELLPADDING=\"3\">\n";
+print PAGE "<TR BGCOLOR=\"yellow\"><TD COLSPAN=3>".
+           "<FONT SIZE=+2><b>Data Fields<b></FONT></TD></TR>\n";
+my $datum;
+foreach $datum (@{$class->{DATA}}) {
+
+#print "$datum\n";
+    my ($access, $type, $name) = $datum =~ /(\w+): ([\w\* <>,:]*) (\w+)/;
+
+    $type =~ s/</&lt;/g;
+    $type =~ s/>/&gt;/g;
+
+    print PAGE "<TR><TD>$access</TD><TD>$type</TD><TD>$name</TD></TR>\n";
+}
+
+print PAGE "</TABLE><P>\n";
+
+
+###############################
+# constructors and destructors
+###############################
+print PAGE "<TABLE BORDER=1 CELLPADDING=\"3\">\n";
+print PAGE "<TR BGCOLOR=\"yellow\"><TD COLSPAN=2>".
+           "<FONT SIZE=+2><b>Constructors / Destructor<b></FONT></TD></TR>\n";
+my $structor;
+foreach $structor (@{$class->{CONSTRUCTORS}}, @{$class->{DESTRUCTORS}}) {
+
+    print PAGE "<TR VALIGN=\"top\"><TD>$structor->{ACCESS}</TD>\n";
+    print PAGE "<TD><B>$structor->{NAME}</B>";
+
+    #######################################
+    # description
+    #######################################
+    my $description = '';
+    if($structor->{DESCRIPTION}) { $description .= $structor->{DESCRIPTION} }
+    if($structor->{THROWS}) { 
+        if($description) { $description .= "<BR>"; }
+        $description .= "<B>Throws:</B> ";
+
+        my $exception;
+        foreach $exception (@{$structor->{THROWS}}) {
+            $description .= "<A HREF=\"$exception.html\">$exception</A>, ";
+        }
+        $description =~ s/, $//;
+    }
+
+    if($description) { print PAGE "<BLOCKQUOTE>$description</BLOCKQUOTE>" }
+
+
+    print PAGE "</TD></TR>\n";
+
+}
+
+
+print PAGE "</TABLE><P>\n";
+
+
+#############################
+# methods
+#############################
+print PAGE "<TABLE BORDER=1 CELLPADDING=\"3\">\n";
+print PAGE "<TR BGCOLOR=\"yellow\"><TD COLSPAN=4>".
+           "<FONT SIZE=+2><B>Methods</B></FONT></TD></TR>\n";
+my $method;
+foreach $method (@{$class->{METHODS}}) {
+
+    print PAGE "<TR VALIGN=\"top\">\n";
+    print PAGE "<TD>$method->{ACCESS}</TD>\n";
+
+    ##################################
+    # special properties
+    ##################################
+    my $special='';
+    if($method->{FRIEND} ) { $special .=             "friend<BR>" }
+    if($method->{STATIC} ) { $special .=             "static<BR>" }
+    if($method->{VIRTUAL}) { $special .= "$method->{VIRTUAL}<BR>" }
+    if($method->{CONST}  ) { $special .=           "constant<BR>" }
+    $special =~ s/<BR>$//;
+
+    print PAGE "<TD>$special</TD>\n";
+
+
+    print PAGE "<TD>$method->{TYPE}</TD>\n";
+    print PAGE "<TD><B>$method->{NAME}</B>";
+
+    #######################################
+    # method description
+    #######################################
+    my $description = '';
+    if($method->{DESCRIPTION}) { $description .= $method->{DESCRIPTION} }
+    if($method->{THROWS}) { 
+        if($description) { $description .= "<BR>"; }
+        $description .= "<B>Throws:</B> ";
+
+        my $exception;
+        foreach $exception (@{$method->{THROWS}}) {
+            $description .= "<A HREF=\"$exception.html\">$exception</A>, ";
+        }
+        $description =~ s/, $//;
+    }
+
+    if($description) { print PAGE "<BLOCKQUOTE>$description</BLOCKQUOTE>" }
+
+    print PAGE "</TD></TR>\n";
+
+
+}
+
+print PAGE "</TABLE><P>\n";
+
+###########################
+# operators
+###########################
+print PAGE "<TABLE BORDER=1 CELLPADDING=\"3\">\n";
+print PAGE "<TR BGCOLOR=\"yellow\"><TD COLSPAN=4>".
+           "<FONT SIZE=+2><B>Operators</B></FONT></TD></TR>\n";
+
+my $operator;
+foreach $operator (@{$class->{OPERATORS}}) {
+
+    print PAGE "<TR VALIGN=\"top\">\n";
+    print PAGE "<TD>$operator->{ACCESS}</TD>\n";
+    print PAGE "<TD>$operator->{TYPE}</TD>\n";
+    
+    my @args = @{$operator->{ARGS}};
+    print PAGE "<TD>";
+    if(@args == 2) {
+        ##################
+        # binary operator
+        ##################
+        print PAGE "<B>$args[0] $operator->{NAME} $args[1]</B>";
+    
+    }
+
+    #######################################
+    # description
+    #######################################
+    my $description = '';
+    if($operator->{DESCRIPTION}) { $description .= $operator->{DESCRIPTION} }
+    if($operator->{THROWS}) { 
+        if($description) { $description .= "<BR>"; }
+        $description .= "<B>Throws:</B> ";
+
+        my $exception;
+        foreach $exception (@{$operator->{THROWS}}) {
+            $description .= "<A HREF=\"$exception.html\">$exception</A>, ";
+        }
+        $description =~ s/, $//;
+    }
+
+    if($description) { print PAGE "<BLOCKQUOTE>$description</BLOCKQUOTE>" }
+
+
+    print PAGE "</TD></TR>\n";
+
+} # end of loop over operators
+
+print PAGE "</TABLE><P>\n";
+
+
+######################
+# HTML end stuff
+######################
+print PAGE "<HR>\n";
+print PAGE "<CENTER>\n";
+print PAGE "<A HREF=\"class_index.html\">Alphabetic Class Index</A>\n";
+print PAGE "&nbsp;&nbsp;|&nbsp;&nbsp;\n";
+print PAGE "<A HREF=\"tree.html\">Class Inheritance Tree Index</A>\n";
+print PAGE "&nbsp;&nbsp;|&nbsp;&nbsp;\n";
+print PAGE "<A HREF=\"tool_index.html\">Tool Index</A>\n";
+print PAGE "</CENTER>\n";
+
+print PAGE "</BODY></HTML>\n";
+close PAGE;
+
+
+} # end of print_class_page method
+
+##############################################################################
+# take a list of classes and return a list of those classes, plus all their
+# embedded classes recursively.
+##############################################################################
+sub flatten_embedded_tree {
+
+my @all_classes=();
+
+my $class;
+foreach $class (@_) {
+
+    push @all_classes, ($class, flatten_embedded_tree(@{$class->{EMBEDDED}}) );
+
+} 
+
+return @all_classes;
+
+} # end of flatten_embedded_tree function
+
+
+##############################################################################
+# 
+##############################################################################
+sub extract_classes {
+
+my $text = shift;
+my $header = shift;
+my $code = shift;
+my $enclosing = shift;
+
+my @classes=();
+my $remaining='';
+
+while($text =~ /class\s/) {
+
+    ###############################################
+    # clip up to the beginning of the first class 
+    ###############################################
+    my ($before) = $text =~ /^(.*?)class\s/;
+    $remaining .= $before;
+
+    $text =~ s/^.*?(class\s)/$1/;
+
+    my $class_text;
+    ($class_text, $text) = find_end_of_class($text);
+
+    my $class = parse_class($class_text, $header, $code, $enclosing);
+    push @classes, ($class);
+
+} 
+
+$remaining .= $text;
+
+###########################################################
+# make sure all the parent classes have their full names
+###########################################################
+if($enclosing) {
+    foreach $class (@classes) {
+        if($class->{PARENT} &&
+           grep {$_->{BASE_NAME} eq $class->{PARENT}} @classes ) {
+            ##################################################################
+            # the parent of this class is one of the fellow embedded classes
+            ##################################################################
+            $class->{PARENT} = "${enclosing}::$class->{PARENT}";
+        }
+    }
+}
+
+
+return ($remaining, @classes);
+
+} # end of extract_classes function
+
+##############################################################################
+# 
+##############################################################################
+sub find_end_of_class {
+
+    my $text = shift;
+
+    my $bracket_count=1;
+    my $i;
+    for($i=index($text, '{')+1; $i<length($text) && $bracket_count; $i++) {
+        my $c = substr($text, $i, 1) ;
+        if($c eq '{' ) { $bracket_count++ }
+        if($c eq '}' ) { $bracket_count-- }
+    }
+
+    $i++;
+
+    return (substr($text, 0, $i), substr($text, $i) );
+
+
+} # end of find_end_of_class function
+
+
+
+###########################################################################
+# parse the text for a single class which contains no embedded classes
+###########################################################################
+sub parse_class {
+
+my $text = shift;
+my $header = shift;
+my $code = shift;
+my $enclosing = shift;
+
+#########################################################################
+# create a class structure and set the name of the class and its parent
+#########################################################################
+my $class = {};
+($class->{BASE_NAME}) = $text =~ /^class\s+(\w+)/;
+($class->{PARENT}) = $text =~ /^class\s+\w+\s:\s*\w+\s+(\w+)/;
+
+$class->{NAME} = $class->{BASE_NAME};
+if($enclosing) { 
+    $class->{NAME} = "${enclosing}::$class->{BASE_NAME}";
+#    $class->{PARENT} = "${enclosing}::$class->{PARENT}";
+}
+
+print "    name = $class->{NAME}\n"; # parent=$class->{PARENT}\n";
+
+######################################
+# clip out what's inside the brackets
+######################################
+$text =~ s/^.*?{//;
+$text =~ s/};[^}]*$//;
+
+
+##########################################
+# find and take out any embedded classes
+##########################################
+my @embedded;
+($text, @embedded) = extract_classes($text, $header, $code, $class->{NAME});
+$class->{EMBEDDED} = \@embedded;
+
+########################################################
+# parse the remaining text to extract methods and data
+########################################################
+my @members = extract_members($text);
+
+
+
+###############################################################
+# expand all mention of embedded classes to their full names
+##############################################################
+my $embedded;
+foreach $embedded (@{$class->{EMBEDDED}}) {
+    my $name = $embedded->{BASE_NAME};
+
+    my $member;
+    foreach $member (@members) {
+
+        $member =~ s/(\W)$name(\W)/$1$class->{NAME}::$name$2/g;
+        $member =~ s/$class->{NAME}::$class->{NAME}/$class->{NAME}/g;
+
+    }
+
+}
+
+
+
+
+###############################
+# find the constructor members
+###############################
+my @constructors = grep /: $class->{BASE_NAME}\(/, @members;
+
+$class->{CONSTRUCTORS}=[];
+foreach (@constructors) {
+    push @{$class->{CONSTRUCTORS}}, (parse_structor($_, $class->{NAME}, $code));
+
+}
+@members = grep !/: $class->{BASE_NAME}\(/, @members;
+
+
+###############################
+# find the destructor members
+###############################
+my @destructors = grep / ~$class->{BASE_NAME}\(/, @members;
+
+$class->{DESTRUCTORS}=[];
+foreach (@destructors) {
+    push @{$class->{DESTRUCTORS}}, (parse_structor($_, $class->{NAME}, $code));
+
+}
+
+@members = grep !/ ~$class->{BASE_NAME}\(/, @members;
+
+
+################################
+# find the operators
+################################
+my @operators = grep /\soperator\s*\W/, @members;
+
+$class->{OPERATORS} = [];
+foreach (@operators) {
+    push @{$class->{OPERATORS}}, parse_operator($_, $class->{NAME}, $code);
+}
+@members = grep !/\soperator\s*\W/, @members;
+
+
+################################
+# find the other method members
+################################
+my @methods = grep /^[^=]*\(/, @members;
+
+$class->{METHODS} = [];
+my $line;
+foreach (@methods) {
+
+    push @{$class->{METHODS}}, (parse_method($_, $class->{NAME}, $code));
+
+}
+@members = grep !/^[^=]*\(/, @members;
+
+
+##########################
+# everything else is data 
+##########################
+$class->{DATA} = \@members;
+
+
+##############################################################################
+# extract the class description from the comments in the original header file
+##############################################################################
+my $name = $class->{BASE_NAME};
+
+($class->{DESCRIPTION}) = $header =~ m|/\*+\s*(.*?)\s*\*+/\s*class\s+$name\s+|;
+if(!defined $class->{DESCRIPTION}) { $class->{DESCRIPTION}="" }
+
+####################################################
+# the above regexp can allow trash before the start 
+# of the comment so clip that off here
+####################################################
+$class->{DESCRIPTION} =~ s|.*/\*+\s*||;
+
+####################################################
+# make sure it's capitalized and ends in a period 
+###################################################
+$class->{DESCRIPTION} = ucfirst($class->{DESCRIPTION});
+if($class->{DESCRIPTION} !~ /\.$/ && $class->{DESCRIPTION} !~ />$/ ) { 
+    $class->{DESCRIPTION} .= '.' 
+}
+
+return $class;
+
+}
+
+##########################################################################
+#
+##########################################################################
+sub extract_members {
+
+my $text = shift;
+
+###############################
+# get rid of any bracket pairs
+###############################
+while( $text=~ s/{[^{}]*}/;/g ) {}
+
+#print "$text\n------------------------\n\n";
+
+#####################################
+# split into lines at semicolons
+# and remove any blank lines
+#####################################
+my @lines = split /;/, $text;
+
+@lines = grep !/^\s*$/, @lines;
+@lines = grep !/^\s*\w+:\s*$/, @lines; # empty access specifiers
+
+my $access="private:";
+my $line;
+foreach $line (@lines) {
+
+    ######################################
+    # get rid of unnecessary white space 
+    ######################################
+    $line =~ s/^\s*//; # leading
+    $line =~ s/\s*$//; # trailing
+    $line =~ s/\s+/ /g; # contract multiple spaces
+    $line =~ s/ :/:/;  # before a colon
+    $line =~ s/\s*\(\s*/\(/; # around
+    $line =~ s/\s*\)\s*/\)/; # parens
+
+    ################################
+    # is there an access indicator?
+    ################################
+    my ($new_access) = $line =~ /^(\w+:)/;
+    if($new_access) {
+        ###########################
+        # change the current access
+        ###########################
+        $access = $new_access;
+    } else {
+        ######################################
+        # need to prepend an access indicator
+        ######################################
+        $line = $access.$line;
+    }
+
+
+
+    ###################################
+    # clip trailing stuff
+    ###################################
+    ($line) = $line =~ /^(\w+:[^;]*)/;
+    $line =~ s/\s*$//;
+
+    ###################################################
+    # make sure there is a space after the first colon
+    ###################################################
+    $line =~ s/(\w+):(\S)/$1: $2/;
+    
+    #print "|$line|\n";
+}
+
+
+#print "--------------------------------------------------\n\n";
+
+return @lines;
+
+} # end of extract_members function
+
+
+############################################################################
+# parses the header line describing a method and returns a method structure
+############################################################################
+sub parse_method {
+
+my $line = shift;
+my $class_name = shift;
+my $code = shift;
+
+my $method = {};
+
+my ($access, $type, $name, $decorations) 
+                                     = $line =~ /(\w*): (.*) (\w+\(.*?\))(.*)$/;
+
+#print "$line\n";
+###########################################
+# is this a virtual method?
+###########################################
+($method->{VIRTUAL}) = $type =~ /(virtual)\s/;
+$type =~ s/virtual\s*//;
+
+#########################################
+# is this a static method?
+#########################################
+$method->{STATIC} = $type =~ /static\s/;
+$type =~ s/static\s*//;
+
+###############################################
+# is this just a friend and not a true member?
+###############################################
+$method->{FRIEND} = $type =~ /friend\s/;
+$type =~ s/friend\s*//;
+
+
+################################################
+# extract the exceptions thrown
+################################################
+my ($throws) = $decorations =~ /throw\((.*)\)/;
+if($throws) {
+    my @throws = split /\s*,\s*/, $throws;
+    $method->{THROWS} = \@throws;
+}
+
+$decorations =~ s/throws(.*)//;
+
+#############################################################
+# is it a constant method (i.e. doesn't change the object)?
+#############################################################
+$method->{CONST} = $decorations =~ /const/;
+
+################################################
+# is it a pure virtual method?
+################################################
+if($decorations =~ /=\s*0/ ) { $method->{VIRTUAL} = "pure virtual" }
+
+$method->{ACCESS} = $access;
+$method->{TYPE} = $type;
+$method->{NAME} = $name;
+
+################################################
+# extract comment from the code file
+################################################
+my $key;
+if($method->{FRIEND} ) {
+    $key = "$method->{TYPE} $name";
+} else {
+    $key = "$method->{TYPE} ${class_name}::$name";
+}
+
+$method->{DESCRIPTION} = $code->{$key};
+                                  
+return $method;
+
+}
+
+
+############################################################################
+# parses the header line describing a constructor or destructor method and 
+# returns a structure describing it
+############################################################################
+sub parse_structor {
+
+my $line = shift;
+my $class_name = shift;
+my $code = shift;
+
+#################################
+# get the base name for the class
+##################################
+my $base_name = $class_name;
+$base_name =~ s/.*:://;
+
+my $structor = {};
+
+#print "$line\n";
+
+my ($access, $type, $name, $decorations) 
+                     = $line =~ /(\w+): (\w*) ?(~?${base_name}\(.*?\))(.*)$/;
+
+
+
+$structor->{ACCESS} = $access;
+$structor->{NAME} = $name;
+
+##########################################
+# parse the throw clause if there is one
+##########################################
+my ($throws) = $decorations =~ /throw\((.*)\)/;
+if($throws) {
+    my @throws = split /\s*,\s*/, $throws;
+    $structor->{THROWS} = \@throws;
+}
+
+##################################################
+# get the comments from the .cc file, if any
+##################################################
+my $key = "${class_name}::$name";
+$structor->{DESCRIPTION} = $code->{$key};
+
+#print "key=|$key|\n\n";
+
+
+return $structor;
+
+} # end of parse_constructor method
+
+
+############################################################################
+# parses the header line describing an operator and 
+# returns a structure describing it
+############################################################################
+sub parse_operator {
+
+my $line = shift;
+my $class_name = shift;
+my $code = shift;
+
+
+my $op={};
+
+#print "$line\n";
+
+my ($access, $type, $name, $args, $decorations) 
+                     = $line =~ /(\w+): (.*) operator(.*)\((.*?)\)(.*)$/;
+
+
+#print "access=|$access\n";
+#print "type=|$type|\n";
+#print "name=|$name|\n";
+#print "args=|$args|\n";
+#print "decorations=|$decorations|\n";
+#print "\n";
+
+$op->{ACCESS} = $access;
+$op->{NAME} = $name;
+
+########################################
+# member function or a friend function?
+########################################
+$op->{FRIEND} = $type =~ /(friend)/;
+$type =~ s/friend\s*//;
+
+$type =~ s/virtual\s*//;
+
+$op->{TYPE} = $type;
+
+#################################################
+# get a list of arguments
+# if this is a member function, then explicitly
+# add this object as the first argument
+################################################
+my @args = split /\s*,\s*/, $args;
+foreach (@args) { s/ ?\w*$// }
+
+unless($op->{FRIEND}) { unshift @args, ("$class_name&") }
+
+$op->{ARGS} = \@args;
+
+######################################
+# get the comment from the code file 
+######################################
+my $key;
+if($op->{FRIEND}) { $key = "$type operator$name($args)" }
+else              { $key = "$type ${class_name}::operator$name($args)" }
+
+#print "key=|$key|\n";
+
+$op->{DESCRIPTION} = $code->{$key};
+
+return $op;
+
+} # end of parse_operator function

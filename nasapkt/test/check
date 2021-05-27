@@ -1,0 +1,119 @@
+#! /usr/bin/ksh
+
+###########################################################################
+# This is a very simple script which will run the tools 
+# and make sure their output is what is expected.
+###########################################################################
+
+PATH="../bin:../src:$PATH"
+
+#########################
+# encode_ldp
+#########################
+encode_ldp -i doc.pdf -o doc.ldp.test -c
+cmp doc.ldp doc.ldp.test
+if [ $? -ne 0 ]; then
+    echo "encode_ldp failed\n";
+else 
+    echo "encode_ldp\tis OK"
+    rm -f doc.ldp.test
+fi
+
+
+#########################
+# decode_ldp
+#########################
+decode_ldp -i doc.ldp -o doc.pdf.test -h -c
+cmp doc.pdf doc.pdf.test
+if [ $? -ne 0 ]; then
+    echo "decode_ldp failed\n";
+else 
+    echo "decode_ldp\tis OK"
+    rm -f doc.pdf.test
+fi
+
+#########################
+# decode_ldp
+#########################
+merge_packets -i uvot_segmented.ccsds -o uvot_merged.ccsds.test
+cmp uvot_merged.ccsds uvot_merged.ccsds.test
+if [ $? -ne 0 ]; then
+    echo "merge_packets failed\n";
+else 
+    echo "merge_packets\tis OK"
+    rm -f uvot_merged.ccsds.test
+fi
+
+#########################
+# bin_packets
+#########################
+#rm -f swift_*[0-9] trash errors pushback uvot_used
+#bin_packets -i all_data.5.6.2 -ldp_dir . -obs_dir .
+#error=$?
+#
+#for file in trash errors pushback; do
+#    if [ -s $file ]; then
+#        error=1
+#        break
+#    fi
+#done
+#
+#for file in $(ls swift*[0-9] uvot_used ); do
+#    
+#    cmp $file.orig $file
+#    if [ $? -ne 0 ]; then
+#        error=1
+#        break
+#    fi
+#done
+#
+#
+#if [ $error -ne 0 ]; then
+#    echo "bin_packets failed\n";
+#else 
+#    echo "bin_packets\tis OK"
+#    rm -f swift_*[0-9] trash errors pushback uvot_used
+#fi
+
+
+
+#########################
+# count_packets
+#########################
+#count_packets < all_data.5.6.2 > all_data.5.6.2.count.test
+count_packets -i all_data.5.6.2 > all_data.5.6.2.count.test
+cmp all_data.5.6.2.count all_data.5.6.2.count.test
+if [ $? -ne 0 ]; then
+    echo "count_packets failed\n";
+else 
+    echo "count_packets\tis OK"
+    rm -f all_data.5.6.2.count.test
+fi
+
+#########################
+# some_packets
+#########################
+some_packets -i all_data.5.6.2 -f 1 -t 635 -o all_data.5.6.2.some.test
+cmp all_data.5.6.2 all_data.5.6.2.some.test
+if [ $? -ne 0 ]; then
+    echo "some_packets failed\n";
+else 
+    echo "some_packets\tis OK"
+    rm -f all_data.5.6.2.some.test
+fi
+
+#########################
+# sort_packets
+#########################
+sort_packets -i swift_head3_771_0_1.orig -o swift_head3_771_0_1.orig.sort.test
+cmp swift_head3_771_0_1.orig swift_head3_771_0_1.orig.sort.test
+if [ $? -ne 0 ]; then
+    echo "sort_packets failed\n";
+else 
+    echo "sort_packets\tis OK"
+    rm -f swift_head3_771_0_1.orig.sort.test
+fi
+
+
+
+

@@ -1,0 +1,28 @@
+# Packet type: HEAD2
+# BAT echos of ACS packets.
+# This description does not include the checksum which appears at the end 
+# of the ACS packets.
+
+# Define delimiter
+DEL,|
+#
+# Define each data field with the following format:
+#PKT|APID|Mnemonic||+||type|start byte|start bit|size in bits|||description|
+
+PKT||time       ||+||cSwiftTime| 0|0|48|||"Attitude time stamp"
+PKT||fill       ||+||UI        | 6|0|16|||"Unused"
+PKT||obs        ||+||U         | 8|0| 8|||"Observation Segment ID"|
+PKT||target     ||+||U         | 9|0|24|||"Target ID"|
+PKT||ra         ||+||F12345678 |12|0|64|||"Right Ascension (deg)"
+PKT||dec        ||+||F12345678 |20|0|64|||"Declination (deg)"
+PKT||roll       ||+||F1234     |28|0|32|||"Roll Angle (deg)"
+PKT||lat        ||+||F1234     |32|0|32|||"Latitude (deg)"
+PKT||lon        ||+||F1234     |36|0|32|||"Longitude (deg)"
+PKT||alt        ||+||F1234     |40|0|32|||"Altitude (m)"
+PKT||bus        ||+||F1234     |44|0|32|||"Spacecraft bus voltage"
+PKT||saa        ||+||U1        |48|0| 8|||"1 => in SAA"
+PKT||ten_arcmin ||+||U1        |49|0| 8|||"1 => within 10 arcmin of target"
+PKT||settled    ||+||U1        |50|0| 8|||"1 => is settled on target"
+PKT||safemode   ||+||U1        |51|0| 8|||"1 => in Safe Mode"
+
+#PKT||checksum   ||+||U12       |52|0|16|||"Packet checksum"

@@ -1,0 +1,33 @@
+#! /aps/tools/squirt/squirt
+###############################################################################
+# scans through a set of LDPs and sets the obs/target ID in the second
+# page1 to be the same as in the first page1
+##############################################################################
+
+init: $product=-1;
+
+$page1 = %ldp && %page == 1;
+
+
+$second = $page1 && $product == %product;
+$first  = $page1 && !$second;
+$page1 && ($product=%product);
+
+$first && ($first_obs    = %U[2, 8]);
+$first && ($first_target = %U[3,24]);
+
+$second && ($second_obs    = %U[2, 8]);
+$second && ($second_target = %U[3,24]);
+
+$inconsistent = $second && ($first_target != $second_target ||
+                            $first_obs != $second_obs);
+
+$inconsistent && "product=%product $first_target/$first_obs  %U[3,24]/%U[2,8]\n";
+
+$inconsistent && (%U[2, 8] = $first_obs);
+$inconsistent && (%U[3,24] = $first_target);
+
+
+$second && ($first_obs    = -1);
+$second && ($first_target = -1);
+

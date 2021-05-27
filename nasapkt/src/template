@@ -1,0 +1,114 @@
+#! /usr/bin/perl -w
+
+my $class = shift;
+my $super = shift;
+
+unless( defined $class ) {
+    print STDERR "Usage: template class superclass\n";
+    exit 1;
+}
+
+if( -f "$class.h" || -f "$class.cc" ) {
+    print STDERR "won't overwrite $class.h $class.cc\n";
+    exit 1;
+}
+
+my $define = $class;
+$define =~ s/([a-z])([A-Z])/${1}_$2/g;
+$define = uc($define);
+$define .= "_H";
+
+print "class=|$class| define=|$define|\n";
+
+#####################
+# make the code file
+#####################
+open CODE, ">$class.cc" || die "Couldn't open $class.cc";
+print CODE "#include \"$class.h\"\n\n";
+
+my $bar="*********************************************************************";
+print CODE "/$bar\n";
+print CODE "* constructor\n";
+print CODE "$bar/\n";
+print CODE "${class}::${class}() {\n";
+print CODE "} // end of constructor\n\n";
+
+print CODE "/$bar\n";
+print CODE "*\n";
+print CODE "$bar/\n";
+
+
+close CODE;
+
+
+#########################
+# header file
+########################
+open HEADER, ">$class.h" || die "Couldn't open $class.h";
+print HEADER "#ifndef $define\n";
+print HEADER "#define $define\n\n";
+
+if($super) {
+    print HEADER "#include \"$super.h\"\n\n";
+}
+
+
+#######################
+# class definition
+#######################
+print HEADER "class $class ";
+if($super) {
+    print HEADER ": public $super ";
+}
+print HEADER "{\n\n";
+
+
+##############
+# data 
+##############
+print HEADER "private:\n";
+print HEADER "    /*******\n";
+print HEADER "    * data *\n";
+print HEADER "    *******/\n\n\n";
+
+#################
+# constructor
+#################
+print HEADER "public:\n";
+print HEADER "    /**************\n";
+print HEADER "    * constructor *\n";
+print HEADER "    **************/\n";
+print HEADER "    $class();\n\n";
+
+
+#################
+# destructor
+#################
+print HEADER "    /*************\n";
+print HEADER "    * destructor *\n";
+print HEADER "    *************/\n";
+print HEADER "    virtual ~$class() {}\n\n";
+
+#################
+# accessors
+#################
+print HEADER "    /************\n";
+print HEADER "    * accessors *\n";
+print HEADER "    ************/\n\n";
+
+#################
+# methods
+#################
+print HEADER "    /**********\n";
+print HEADER "    * methods *\n";
+print HEADER "    **********/\n\n";
+
+
+##################
+# end stuff
+##################
+print HEADER "}; // end of $class class\n\n";
+print HEADER "#endif // $define\n";
+
+close HEADER;
+

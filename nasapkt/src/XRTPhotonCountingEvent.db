@@ -1,0 +1,28 @@
+########################################################################
+# This is an ITOS-like database definition for a Swift XRT
+# Photon Counting Mode event
+########################################################################
+
+# Define delimiter
+DEL,|
+
+#
+# Define each data field with the following format:
+#PKT|APID|Mnemonic||+||type|start byte|start bit|size in bits|||description|
+
+PKT|1344|rawX||+||U| | |10|||"X coordinate of pixel"
+PKT|1344|rawY||+||U| | |10|||"Y coordinate of pixel"
+
+PKT|1344|ph0 ||+||U| | |12|||"DN for pixel (x-1, y-1)"
+PKT|1344|ph1 ||+||U| | |12|||"DN for pixel (x, y-1)"
+PKT|1344|ph2 ||+||U| | |12|||"DN for pixel (x+1, y-1)"
+
+PKT|1344|ph3 ||+||U| | |12|||"DN for pixel (x-1, y)"
+PKT|1344|ph4 ||+||U| | |12|||"DN for pixel (x, y)"
+PKT|1344|ph5 ||+||U| | |12|||"DN for pixel (x+1, y)"
+
+PKT|1344|ph6 ||+||U| | |12|||"DN for pixel (x-1, y+1)"
+PKT|1344|ph7 ||+||U| | |12|||"DN for pixel (x, y+1)"
+PKT|1344|ph8 ||+||U| | |12|||"DN for pixel (x+1, y-1)"
+
+

@@ -1,0 +1,220 @@
+__________________
+1) What is Squirt?
+
+Squirt is a scripting language for viewing, manipulating and filtering
+Swift CCSDS telemetry. It's kind of like "awk" for packets.
+
+
+_____________________
+2) Installing Squirt:
+
+First you will need to install the "packets" software available from 
+http://adfwww.gsfc.nasa.gov/swift/software/
+
+Then after unpacking the squirt tar file you will need to make a few simple
+edits to the Makefile. The comments at the head of that file tell you
+what to do.
+
+Then just run "make". You will need g++ to compile it. It has been tested
+with both 2.x and 3.x versions of g++ on Solaris and Linux.
+
+The "squirt" executable can be moved to a "bin" directory, or you can 
+leave it where it is and set your PATH accordingly.
+
+
+________________
+3) Using Squirt:
+
+______________
+3.1) Examples:
+There are a number of example scripts in the "examples" directory of the
+distribution. See the README file there.
+
+______________________
+3.2) Running a Script:
+There are three ways to run a squirt script. These should be familiar
+to perl or shell script users.
+
+- If the first line of the script begins with #! /full/path/to/squirt
+  then you can simply execute the script.
+
+- you can run "squirt script_filename"
+
+- or you can put the script into the command line as a "one-liner"
+  (e.g. squirt -e 'filter: %apid==1344;'). Note that it is a good idea to single
+  quote the script so the shell won't mess with it. Note also that there must
+  be a space between the "-e" and the script (unlike in perl). Don't forget the
+  semicolon, and make sure you redirect stdout or you may get binary data 
+  output to your terminal.
+
+___________
+3.3 Syntax:
+
+____________________________________________
+3.3.1 Most Things Are Like You Would Expect:
+
+Squirt uses a syntax very similar to that of perl or C. A squirt script
+is made up of a series of expressions ending in semicolons.
+comments begin with a "#" and continue to the end of a physical line or
+until the next semicolon.
+
+By default a squirt script reads packets from stdin and writes them to stdout.
+It can write messages to stderr.
+It executes all commands once per packets, except for commands which begin
+with one of the following labels:
+
+"init:" - this expression is executed only when the first packet
+          is read. All init commands are executed before any other commands.
+
+"filter:" - this expression is executed once per packet. If it evaluates
+            to "true", then that packet is passed to the output. Otherwise not.
+            If there is no filter expression in a script, all packets are 
+            passed through. The filter expression is executed after all other
+            expressions. Note that unlabeled expressions are executed for each
+            packet regardless of filtering.
+
+"after:" - this expression is executed when the input stream reaches end of
+           file.
+
+
+The following operators: +, -, *, /, !, &&, ||, <, >, ==, =, (, and )
+all have their familiar usages as in perl or C.  
+The operator precedence is the same as for those languages, except that the
+assignment operator "=" has lower priority than && and ||. Squirt may require
+parenthesis in places you are not used to. For example you can use && and ||
+to make if-then statements as is often done in perl:
+
+$condition && $value = %apid; # wrong, parses to ($condition && $value) = %apid;
+
+You have to do this instead:
+$condition && ($value=%apid); # correct, sets $value if $condition is true
+
+
+Squirt recognizes literal numbers. For example:
+$value=7.3;
+All numbers are treated as double precision floating point values.
+
+Variable names start with "$". Note that the "$" must be present even when 
+assigning a value to the variable, just as in perl. A variable name
+can contain characters a-z, A-Z, 0-9, and "_".
+
+The variables $1, $2, etc are set to the command line arguments, just as
+in shell scripts. Note that squirt has no string data type, so these values
+can only be numbers.
+
+The variable "$packet" is automatically set to the number of the current 
+packet, where the first packet is "1".
+
+_______________________
+3.3.2 Telemetry fields:
+
+A telemetry field is alot like a variable, except that the field name starts
+with "%" instead of "$". Referencing a field produces the corresponding
+value in the current packet, and assigning to a field sets that value in the
+packet.
+
+The following fields may be used:
+
+Primary Header Items:
+%apid     - the APID of this packet
+%first    - true if this is the first packet of a group
+%last     - true if this is the last  packet of a group
+%sequence - the packet sequence counter
+%length   - the primary header length field
+
+Secondary Header Items:
+%time2 - Packet creation time in seconds
+
+Tertiary Header Items:
+%obs        - 8 bit obs ID
+%target     - 24 bit target ID
+%time3      - science time in seconds
+%correction - correction to a0pply to %time3 to get UTC
+
+LDP Packet Items:
+%product - LDP product number
+%page    - LDP page number
+
+Packet Types:
+In addition the following special packet type fields may be referenced, but
+not assigned to:
+%head2 - true if the packet has a seondary header
+%head3 - true if the packet has a tertiary header
+%ldp   - true if the packet is part of an LDP.
+
+Note that %head2 is true if %head3 or %ldp are true.
+
+Data Fields:
+Finally, a field of the form %T[bytes.bits, size] refers to a field
+in the packet data following the header(s). "T" is the data format, where
+"U" means unsigned integer, "I" means twos compliment signed integer, and "F" 
+means IEEE floating point number. All fields are assumed to be big-endian.
+"bytes" is the byte offset of the field after all headers.
+"bits" is the offset in bits after the byte offset and may be omitted if 0.
+"size" is the size of the field in bits.
+
+Data fields may be referenced or assigned to. Floating point numbers may only
+have sizes 32 or 64.
+
+For example, %I[3, 16] refers to a 16 bit signed integer located 3 bytes after
+the packet headers. The field %U[4.7, 1] refers to the least significant bit
+of the fourth byte in the header.
+
+___________________________
+3.3.3 Strings and Printing:
+
+A double quote delimited string is printed to stderr and evaluates to 0.
+Variables and fields are evaluated inside a string, but other expressions
+are not.
+
+For example:
+
+"page=%page\n"; # print the current LDP page number.
+
+%ldp && "page=%page\n"; # print the page number only if this is an LDP packet.
+
+$a = "hohoho\n"; # sets $a to zero - not much point in this
+
+________________________
+3.4 Command Line Options
+
+You can specify various command line options before the script file name
+when running squirt. Note that if you are using the "shebang" (#!) method
+of running squirt, the options must be given in the first line of the script
+and not on the command line of the script. 
+
+Most options take an argument. There must be a space between the option and the
+argument.
+
+The following options are available:
+
+-i infile    - read packets from the given file instead of from stdin
+
+-o outfile   - write packets to the given file instead of stdout
+
+-a apid_list - use the given APID configuration file instead of the default
+               one specified when squirt was compiled.
+
+-e commands  - run the given commands instead of running the commands in
+               a file. This is convenient for very short (e.g. one line) 
+               scripts.
+
+-v           - run squirt in verbose mode. This traces the expression parsing
+               and execution and is useful for debugging, since squirt
+               runtime error messages usually do not say where in the script
+               they occured. Tracing information is written to stderr.
+               Note that this can produce alot of output if you are processing
+               a file with alot of packets.
+
+
+___________________________
+4. Why is it called Squirt?
+
+No particular reason.
+
+
+________
+5. Help!
+
+Squirt is written by Edward Pier pier@ssvs.gsfc.nasa.gov
+Let me know if you find it useful or have any problems.

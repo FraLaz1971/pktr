@@ -1,0 +1,368 @@
+#include "LDPBuffer.h"
+
+/****************************************************************************
+* constructor
+****************************************************************************/
+LDPBuffer::LDPBuffer() {
+
+/***********************************
+* create the PacketPipe connection *
+***********************************/
+_pipe = new PacketPipe();
+
+/*********************************
+* initialize the buffered packet *
+*********************************/
+p = NULL;
+position=0;
+
+/***************************************************
+* don't know a priori how many pages there will be *
+***************************************************/
+_npages =0;
+
+/********************************
+* initialize packet information *
+********************************/
+_prev_apid    = unknown;
+_prev_product = unknown;
+_prev_page    = unknown;
+_prev_size    = unknown;
+
+
+hit_eof_in_last_block_read=0;
+
+
+}; // end of constructor
+
+
+/****************************************************************************
+* returns 0  if we have read all the packets from the stream
+* returns 1 otherwise
+****************************************************************************/
+int LDPBuffer::moreData() { 
+
+    if(p==NULL && _prev_page != unknown ) return 0;
+    else                                  return 1;
+
+} // end of moreData method
+
+/****************************************************************************
+* returns 1 if the current and previous packets were in different products
+* returns 0 if the current and previous packets were in the same products
+* returns 1 if the current packet is the first ever read or if no packets
+*           have been read.
+* returns 1 if at the end of the data stream
+****************************************************************************/
+int LDPBuffer::newProduct() {
+
+if(_prev_page == unknown) return 1; // at beginning
+if(p==NULL) return 1;   // at end of packet stream
+
+if(p->apid() != _prev_apid || p->product() != _prev_product) return 1;
+
+return 0;
+
+} // end of newProduct method
+
+
+/****************************************************************************
+* returns the number of pages missing between the packet currently being read
+* and the previous packet. If called at EOF, this will tell whether
+* a gap was encountered and how large it was in packets.
+* Returns 0 if no packets have been read yet or if a product ended,
+* but we didn't know how many pages it should contain
+****************************************************************************/
+int LDPBuffer::missingPages() {
+
+if(_prev_page == unknown) {
+    /**************************************************
+    * this is the first packet we have read 
+    * so calculate the gap from the first page number
+    **************************************************/
+    if(p==NULL) return 0;
+    return p->page() - first_page;
+}
+
+if(p==NULL || _prev_apid != p->apid() || _prev_product != p->product() ) {
+    /*********************************************************
+    * the previous packet was the last one in a data product *
+    *********************************************************/
+    if(_prev_npages==0) return 0; // can't tell if there are any missing
+    else                return _npages + first_page -1 - _prev_page;
+}
+
+/***************************************************
+* if we get here we are in the middle of a product *
+***************************************************/
+return p->page() - _prev_page -1;
+
+} // end of missingPages method
+
+/****************************************************************************
+* returns the result of missingPages() times the number of bytes per page.
+* It looks at the packets on either side of the gap (if any) to determine
+* the page size. Returns unknown if the page size can't be determined.
+* The method assumes packets have uniform size except for the last
+* non-redendant packet. If this is not true this method could return
+* incorrect results.
+****************************************************************************/
+int LDPBuffer::missingBytes() {
+
+int npages = missingPages();
+if(npages==0) return 0;
+
+if(_prev_size==unknown && p==NULL) return unknown; // no size info available
+
+if(_prev_size==unknown) {
+    /**************************************************
+    * there was a gap at the beginning of the product *
+    **************************************************/
+
+    if(npages != 0 && p->page() == npages +first_page -1 ) {
+        /***************************************************************
+        * this is the pathological situation where everything in 
+        * the product is missing except the last non-redundant packet.
+        * Because that packet has odd size, we just return unknown.
+        * Note that if the number of pages is not known a priori,
+        * we can miss this condition and return an incorrect value.
+        * But that will happen rarely, and if it is true we have
+        * bigger problems, like we can't read the header.
+        ***************************************************************/
+        return unknown;
+    }
+
+    /*******************************************************
+    * use the current packet size - see above for one odd  
+    * case where this could be wrong
+    *******************************************************/
+    return npages * p->size(); 
+
+} // end if gap at the beginning of a product
+
+if(p==NULL || _prev_apid != p->apid() || _prev_product != p->product() ) {
+    /*******************************************************************
+    * gap at the end - we can't determine the number of bytes missing
+    * because the last packet can have any size
+    *******************************************************************/
+    return unknown;
+}
+
+/***********************************************************
+* if we get here there is a gap in the middle of a product 
+* we will use the size of the previous packet, since the current
+* packet might be the last in the product, in which case
+* it would have non-representative size
+***********************************************************/
+return npages* _prev_size;
+
+
+} // end of missingBytes method
+
+    
+
+
+/****************************************************************************
+* reset the bufferinto the next packet
+****************************************************************************/
+int LDPBuffer::underflow() { 
+
+
+hit_eof_in_last_block_read=0; // see LDPBuffer::xsgetn()
+
+/***********************
+* read the next packet *
+***********************/
+if( nextPacket() ) return EOF;
+
+/*********************************************
+* reset the buffer into the packet data area *
+*********************************************/
+char* buffer = (char*)p->data();
+setg(buffer, buffer, buffer+p->size());
+
+return (int)buffer[0];
+
+} // end of underflow method
+
+/****************************************************************************
+* read one byte but don't increment the current position
+****************************************************************************/
+int LDPBuffer::uflow() { 
+
+//cout << "LDPBuffer::uflow called\n";
+
+/***********************
+* read the next packet *
+***********************/
+if( nextPacket() ) return EOF;
+ 
+/*********************************************
+* reset the buffer into the packet data area *
+*********************************************/
+char* buffer = (char*)p->data();
+setg(buffer, buffer+1, buffer+p->size());
+ 
+return (int)buffer[0];
+
+
+} // end of uflow method
+
+
+/****************************************************************************
+*
+****************************************************************************/
+int LDPBuffer::pbackfail(int c) {
+
+return EOF;
+
+} // end of pbackfail method
+
+/****************************************************************************
+* read a string of contiguous bytes starting at the current one.
+* Returns the number of bytes read.
+* Currently implemented as a loop over uflow calls, but
+* could be optimized better than that.
+****************************************************************************/
+streamsize LDPBuffer::xsgetn(char* s, streamsize n) {
+
+cout << "xsgetn called n="<<n<<"\n";
+
+    /******************************************************************
+    * this is a cludge to handle the way we use EOF to mean
+    * the end of a product, but not necessarily the end of all data.
+    * when doing block reads, EOF is signaled by reading no bytes
+    * and not by just a partial read.
+    * the "hit_eof" flag is reset at the top of uflow, that's the simplest
+    * and safest way to code it, but not the most efficient at run time.
+    * This will make oustream << LDPBuffer work correctly
+    * and will also make Reader::readBytes() throw exceptions as expected.
+    *****************************************************************/
+    if(hit_eof_in_last_block_read) {
+        hit_eof_in_last_block_read=0;
+        return 0;
+    }
+
+    for(int i=0; i<n; ++i) {
+        int value = uflow();
+        if(value==EOF) {
+            /***************************************
+            * we reached the end of available data *
+            ***************************************/
+            if(i>0) hit_eof_in_last_block_read=1;
+            return i;
+        }
+        s[i] = value;
+    }
+    return n;
+}
+
+/****************************************************************************
+* Returns the number of unread bytes in the current packet.
+* returns -1 at EOF
+****************************************************************************/
+streamsize LDPBuffer::showmanyc() {
+
+cout << "LDPBuffer::showmanyc() called\n";
+
+return 0;
+
+} // end of showmanyc method
+
+
+
+/****************************************************************************
+* private method for pulling the next packet out of the pipe.
+* Returns 1 if there is anything funny going on between the two packets
+* like a gap or a product number of APID change, or if a NULL packet was
+* pulled out of the pipe.
+* Returns 0 if everything is fine.
+****************************************************************************/
+int LDPBuffer::nextPacket() {
+
+//cout << "LDPBuffer::nextPacket\n";
+
+/*************************************
+* save the info from the last packet *
+*************************************/
+if(p!=NULL) {
+    _prev_apid    = p->apid();
+    _prev_product = p->product();
+    _prev_page    = p->page();
+    _prev_size    = p->size();
+} 
+
+/******************
+* read the packet *
+******************/
+CCSDSPacket* generic_p;
+*_pipe >> generic_p;
+
+//cout << " got packet from pipe\n";
+
+p = dynamic_cast<LDPPacket*>(generic_p); // make sure it's an LDP packet
+if(p==NULL) return 1;
+
+/*
+cout <<  "read packet page="<<p->page()
+     << " product="<<p->product()
+     << " previous="<<_prev_product
+     <<"\n";
+*/
+
+
+/**************************************
+* check if anything funny is going on *
+**************************************/
+if(_prev_apid    != unknown && p->apid()    != _prev_apid   ) return 1;
+if(_prev_product != unknown && p->product() != _prev_product) return 1;
+
+if(_prev_page == unknown && p->page() != first_page) return 1;
+
+if(_prev_page != unknown && p->page() - _prev_page != 1 ) {
+    /*********************************************************************
+    * this page does not follow the last one 
+    * this can mean a gap or that we have reached the first page of the 
+    * redundant header 
+    *********************************************************************/
+    if(p->page() == first_page && (_prev_page==_npages || _npages==0) ) {
+        /*************************************************
+        * this is the first page of the redundant header *
+        *************************************************/
+
+        /*****************************************
+        * skip over the redundant header packets *
+        * by reading packets until we come to a new product
+        * or we run out of packets
+        *****************************************/
+        int saved_apid    = p->apid();
+        int saved_product = p->product();
+
+        do {
+            CCSDSPacket* generic_p;
+            *_pipe >> generic_p;
+            p = dynamic_cast<LDPPacket*>(generic_p);
+
+/*
+            if(p) 
+            cout <<  "read for skipping page="<<p->page()
+                 << " product="<<p->product()
+                 << "\n";
+*/
+
+        } while(p!=NULL && saved_apid    == p->apid() 
+                        && saved_product == p->product() );
+
+    } // end if we were in the redundant header
+
+    return 1;
+
+} // end if the pages number were not sequential
+
+
+/****************************************************
+* if we get here, everything is nice and sequential *
+****************************************************/
+return 0;
+
+} // end of nextPacket method

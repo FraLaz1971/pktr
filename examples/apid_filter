@@ -1,0 +1,19 @@
+#! ../squirt
+##############################################################################
+# This script filters a packet file on a given APID
+#
+# SYNTAX: apid_filter [-]apid
+#
+# If the apid is given as a negative number then the script will remove all
+# packets with the given apid. If the number is positive, only packets with that
+# APID will be passed through
+###############################################################################
+
+init: $apid=$1;
+init: $exclude=0;
+init: $apid<0 && ($exclude=1);
+init: $apid<0 && ($apid = -$apid);
+init: "exclude=$exclude apid=$apid\n";
+
+filter: ( $exclude && %apid != $apid) ||
+        (!$exclude && %apid == $apid);

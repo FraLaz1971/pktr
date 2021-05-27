@@ -1,0 +1,25 @@
+#! ../squirt 
+#############################################################################
+# this script resets the sequence numbers in all packets. The number 
+# increases by one for each packet. Note this assumes that there is only
+# one APID present in the file
+#
+# SYNTAX resequence first [max]
+#
+# first is the sequence number of the first packet. It defaults to 
+#        0 if omitted.
+# max   is the maximum sequence number before recycling to 0. It defaults to
+#       16383 if omitted
+#
+#
+##############################################################################
+
+init: $sequence = $1-1;
+init: $max = 16383;
+init: $2 && ($max = $2); 
+
+$sequence = $sequence +1;
+$sequence > $max && ($sequence=0);
+%sequence = $sequence;
+
+"sequence= %sequence\n";

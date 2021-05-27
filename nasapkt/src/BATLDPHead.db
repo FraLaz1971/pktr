@@ -1,0 +1,66 @@
+# This is the standard header of a BAT science LDP
+
+# Define delimiter
+DEL,|
+#
+# Define each data field with the following format:
+#PKT|APID|Mnemonic||+||type|start byte|start bit|size in bits|||description|
+
+PKT||standard   ||+||cStandardLDPHead |  0|0|144|||"standard part of header"
+PKT||end_head3  ||+||cSwiftHead3      | 18|0|128|||"Tertiary header at end"|
+PKT||head_size  ||+||U                | 34|0| 16|||"Size of LDp header in bytes"
+PKT||ldp_type   ||+||U                | 36|0|  8|||"LDP type"|
+PKT||data_type  ||+||U                | 37|0|  8|||"LDP contents data type"|
+PKT||name0      ||+||U                | 38|0|  8|||"8.3 filename"
+PKT||name1      ||+||U                | 39|0|  8|||"8.3 filename"
+PKT||name2      ||+||U                | 40|0|  8|||"8.3 filename"
+PKT||name3      ||+||U                | 41|0|  8|||"8.3 filename"
+PKT||name4      ||+||U                | 42|0|  8|||"8.3 filename"
+PKT||name5      ||+||U                | 43|0|  8|||"8.3 filename"
+PKT||name6      ||+||U                | 44|0|  8|||"8.3 filename"
+PKT||name7      ||+||U                | 45|0|  8|||"8.3 filename"
+PKT||name8      ||+||U                | 46|0|  8|||"8.3 filename"
+PKT||name9      ||+||U                | 47|0|  8|||"8.3 filename"
+PKT||name10     ||+||U                | 48|0|  8|||"8.3 filename"
+PKT||name11     ||+||U                | 49|0|  8|||"8.3 filename"
+PKT||name12     ||+||U                | 50|0|  8|||"8.3 filename"
+PKT||priority   ||+||U                | 51|0|  8|||"File priority"
+PKT||ebins      ||+||U                | 52|0| 16|||"Number of energy bins"|
+PKT||start_acs  ||+||cACS             | 54|0|432|||"ACS record at start"|
+PKT||end_acs    ||+||cACS             |108|0|432|||"ACS record at end"|
+PKT||gain       ||+||I                |162|0| 32|||"Gain index"
+PKT||offset     ||+||I                |166|0| 32|||"Offset index"
+PKT||block_ids  ||+||U                |170|0| 16|||"Block ID map"
+PKT||detectors  ||+||U                |172|0| 16|||"Number of Detectors"
+
+
+#LDP types are as follows:
+#                 e_survey            = 0,    // s*z.dmp
+#                 e_am241map          = 1,    // a*z.dmp
+#                 e_spectra           = 2,    // a*z.spc
+#                 e_fourchannelmap    = 3,    // w*z.dmp
+#                 e_onechannelmap     = 4,
+#                 e_back_subtr        = 5,
+#                 // e_gainmap           = 6,   // use previous offsets
+#                 // e_offsetmap         = 7,
+#                 e_calmap            = 8,   // p*z.cal   calaccum for _P_ulser height
+#                 e_stripsegmap       = 9,   // c*z.ssg  for strip and segment _C_hannel readings
+#                 e_maskweightmap     = 10,
+#                 e_eventdump         = 11,
+#                 e_acsdump           = 12,
+#                 // e_pulsarbins        = 13,
+#                 e_detEnabled        = 14,
+#                 e_detImaged         = 15,
+#                 //e_stripmap          = 16,   // t*z.cal   stataccums for s_T_rip
+#                 //e_segmap            = 17,   // e*z.cal   stataccums for s_E_gment
+#                 e_gainoffmap        = 18,   // g*z.gno   gain & offset together                 e_dicommandables    = 19,   // c*z.cbl   DI commandables
+#                 e_DAPhousekeeping   = 20,   // h*z.dhk   Pigeonholed data
+#                 e_LDPTspare1        = 21,
+#                 e_LDPTspare2        = 22,
+#                 e_LDPTspare3        = 23,
+#                 e_LDPTspare4        = 24,
+#                 e_LDPTspare5Catchall= 25,   // spare also used as a catchall r SP dump counter
+#                e_nLDPTypes           = 26,    // How many LDPs to put in the  housekeeping counts
+#                 e_generic           = 99,
+#                 e_LDPunknown        = 0xff
+#

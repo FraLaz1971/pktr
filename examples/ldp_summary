@@ -1,0 +1,76 @@
+#! /aps/tools/squirt/squirt
+##############################################################################
+#
+##############################################################################
+
+init: $obs1=-1;
+init: $target1 = -1;
+init: $product=-1;
+init: $last_page = -1;
+
+#########################################
+# check for unknown APIDS
+#########################################
+(!%head2 && %apid<2045) && "Warning[$packet] unknown APID %apid\n";
+
+#####################################
+# check for gaps in the page number
+#####################################
+$out_of_sequence = %ldp && $last_page != -1 && %page != 1 && 
+                   $product == %product &&
+                   %page - $last_page != 1;
+$out_of_sequence && "  Warning page sequence problem $last_page %page\n";
+
+########################################################
+# initialize the product number on the first LDP packet
+########################################################
+$must_init = $product == -1 && %ldp;
+$must_init && ($first_page=%page);
+$must_init && ($last_page=%page);
+$must_init && ($product=%product);
+
+
+##########################################################
+# check if the product number has changed
+##########################################################
+$changed = %ldp && %product != $product;
+
+(%ldp && %page > $last_page) && ($last_page = %page);
+
+
+
+($changed && ($target != $target1 || $obs != $obs1)) && "  Warning inconsistent IDs target=$target1 obs=$obs1\n";
+
+$changed && "product $product pages = $first_page - $last_page target=$target obs=$obs\n";
+
+
+
+$changed && ($product=%product);
+$changed && ($first_page=%page);
+$changed && ($last_page = %page);
+$changed && ($target1=-1);
+$changed && ($obs1=-1);
+
+###############################################################
+# if this is page 1 of an LDP, get the ID from the packet data
+###############################################################
+$page1=%ldp && %page==1;
+$page1 && ($obs = %U[2,8]);
+$page1 && ($target = %U[3,24]);
+
+
+($page1 && $obs1    == -1 ) && ($obs1    = $obs   );
+($page1 && $target1 == -1 ) && ($target1 = $target);
+
+
+
+
+##############
+# no output
+##############
+filter: 0; 
+
+after: ($target != $target1 || $obs != $obs1) && "  Warning inconsistent IDs target=$target1 obs=$obs1\n";
+
+after: "product $product pages = $first_page - $last_page target=$target obs=$obs\n";
+

@@ -1,0 +1,64 @@
+#! /aps/tools/squirt/squirt
+##############################################################################
+#
+##############################################################################
+
+init: $min_target=73000;
+init: $max_target=79999;
+
+#########################################
+# check for unknown APIDS
+#########################################
+(!%head2 && %apid<2045) && "Warning[$packet] unknown APID %apid\n";
+
+
+###############################################################
+# if this is page 1 of an LDP, get the ID from the packet data
+###############################################################
+$page1=%ldp && %page==1;
+$page1 && ($obs = %U[2,8]);
+$page1 && ($target = %U[3,24]);
+
+################################################################
+# if this is a head3 packet, get the ID from the packet header 
+################################################################ 
+%head3 && ($target= %target);
+%head3 && ($obs   = %obs);
+
+###############################
+# determine the new obs/target
+###############################
+$id = $target*256 + $obs;
+
+$new_obs = ($id/16777216) & 255;
+$new_target = ($id & 16777215);
+
+###############################
+# sanity check 
+###############################
+$swapped = ($page1 || %head3) &&
+              ($new_target >=$min_target && $new_target <= $max_target)  &&
+             !(    $target >=$min_target &&     $target <= $max_target);
+
+$swapped && "    Swapped - target=$new_target obs=$new_obs\n";
+(!$swapped && ($page1 || %head3)) && "Not Swapped - target=$target obs=$obs swapped - target=$new_target obs=$new_obs\n";
+
+#############################
+# fix an LDP ID
+#############################
+($swapped && $page1) && (%U[2, 8] = $new_obs   );
+($swapped && $page1) && (%U[3,24] = $new_target);
+
+#############################
+# fix a head3 ID
+#############################
+($swapped && %head3) && (%target = $new_target);
+($swapped && %head3) && (%obs    = $new_obs);
+
+
+
+
+##############
+# no output
+##############
+filter: 1; 

@@ -1,0 +1,19 @@
+########################################################################
+# This is an ITOS-like database definition for a CCSDS primary header
+########################################################################
+
+# Define delimiter
+DEL,|
+
+#
+# Define each data field with the following format:
+#PKT|APID|Mnemonic||+||type|start byte|start bit|size in bits|||description|
+
+PKT||version ||+||U | 0| 0|  3|||"CCSDS format version"|
+PKT||type    ||+||U | 0| 3|  1|||"0=telemetry, 1=telecommand"|
+PKT||hasHead2||+||U | 0| 4|  1|||"Is there a secondary header?"|
+PKT||apid    ||+||U | 0| 5| 11|||"Aplication Process ID"|
+PKT||isLast  ||+||U | 2| 0|  1|||"Is the packet the last of a group?"|
+PKT||isFirst ||+||U | 2| 1|  1|||"Is the packet the first of a group?"|
+PKT||sequence||+||U | 2| 2| 14|||"Packet sequence counter"|
+PKT||length  ||+||U | 4| 0| 16|||"Data field size - 1"|

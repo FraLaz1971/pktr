@@ -1,0 +1,37 @@
+########################################################################
+# This is an ITOS-like database definition for 
+# the 12 byte ITOS packet annotation header.
+########################################################################
+
+# Define delimiter
+DEL,|
+
+#
+# Define each data field with the following format:
+#PKT|APID|Mnemonic||+||type|start byte|start bit|size in bits|||description|
+
+PKT||version    ||+||U | 0| 0|  2|||"Version field from transfer frame header"|
+PKT||spacecraft ||+||U | 0| 2| 10|||"Spacecraft ID from transfer frame header"|
+PKT||vc         ||+||U | 1| 4|  3|||"Virtual Channel from transfer frame"|
+PKT||reserved   ||+||U | 1| 7|  1|||"this bit not used"|
+
+PKT||rs_enabled  ||+||U | 2| 0|  1|||"Reed Solomon enabled if set"|
+PKT||rs_error    ||+||U | 2| 1|  1|||"uncorrectable Reed Solomon error if set"|
+PKT||rs_corrected||+||U | 2| 2|  1|||"Reed Solomon error corrected if set"|
+
+PKT||time_format ||+||U | 2| 3|  4|||"Time code format 0=none, 1=PB1, 4=PB4, 8 =relative TIME42, 9=absolute TIME42"|
+
+PKT||head_error ||+||U | 3| 0|  1|||"packet header from bad frame if set"|
+PKT||reversed   ||+||U | 3| 1|  1|||"data received in rever bit order if set"|
+PKT||seq_error  ||+||U | 3| 2|  1|||"Sequence gap from previous packet if set"|
+PKT||frame_error||+||U | 3| 3|  1|||"uncorrected error in parent frame if set"|
+PKT||checking   ||+||U | 3| 4|  1|||"frame error checking enabled if set"|
+PKT||incomplete ||+||U | 3| 5|  1|||"packet incomplete (filled) if set"|
+
+PKT||vc_seq_error ||+||U | 3| 6|  1|||"transfer frame gap from previous if set"|
+PKT||frame_head_error ||+||U | 3| 7|  1|||"incorrect version or s/c ID in frame header if set"|
+
+PKT||fill ||+||U | 4| 0|  16|||"fill data start byte offset from end of primary header"|
+
+PKT||time  ||+||U |  6| 0|  32|||"ground received time from frame header"|
+PKT||time2 ||+||U | 10| 0|  16|||"ground received time from frame header contd"|

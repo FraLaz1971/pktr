@@ -1,0 +1,398 @@
+#! /usr/bin/perl -w 
+
+use strict;
+
+#############################################################################
+# This perl script generates HTML documentation for a set of tools.
+# it assumes the tool uses the UserInterface class for its input parameters
+# and assumes a few simple documentation standards.
+#############################################################################
+my @files = @ARGV;
+unless(@files) { @files = glob("*.cc"); }
+
+my @tools=();
+my $file;
+foreach $file (@files) {
+
+
+    push @tools, (extract_info($file));
+
+}
+
+foreach (@tools) { make_tool_page($_) }
+
+
+make_tool_index(@tools);
+
+exit 0;
+
+#######################################################################
+# process a single tool
+#######################################################################
+sub extract_info {
+
+my $file = shift;
+
+open  FILE, "<$file";
+my @lines = <FILE>;
+close FILE;
+
+
+###########################################################################
+# make sure this is a tool which uses the UserInterface class and which
+# appears to follow the docuemtation standards
+##########################################################################
+unless( (grep(/^main\s*\(/, @lines ) || grep(/\smain\s*\(/, @lines ))  &&
+        grep(/UserInterface/, @lines)  &&
+        grep(/DESCRIPTION:/ , @lines)  &&
+        grep(/PARAMETERS:/  , @lines)     ) {
+
+    return;
+
+}
+
+
+print "    $file\n";
+
+
+###################################################
+# create a structure to hold info about the tool
+###################################################
+my $tool = {};
+
+$tool->{NAME} = $file;
+$tool->{NAME} =~ s/\.[^\.]*$//;
+
+###########################################
+# parse the comments
+###########################################
+my $end=0;
+my @comments = grep {(/^\/\*\*/&!$end) .. ($end=/\*\*\/\s*$/)} @lines;
+
+shift @comments;
+pop @comments;
+
+#chomp(@comments);
+foreach (@comments) { s/^\*\s*//; }
+chomp(@comments);
+
+my $comments = join "\n", @comments;
+
+#############################
+# extract the description
+#############################
+my ($description) = $comments =~ /DESCRIPTION:\s*(.*)PARAMETERS:/s;
+
+#chomp(@comments);
+#$description = join("\n", grep( /^DESCRIPTION:/../^PARAMETERS:/, @comments) );
+
+$description =~ s/\s*$//;
+
+$description = ucfirst($description);
+if($description !~ /\.$/ ) { $description .= '.' }
+
+$description =~ s/^\s*$/<P>/gm;
+
+$description =~ s/^-\s*/<LI>/gm;
+$description =~ s/<LI>/<UL><LI>/;
+
+$description =~ s/(.*<LI>.*?)<P>/$1<\/UL><P>/s;
+
+$tool->{DESCRIPTION} = $description;
+
+##################################
+# extract parameter descriptions
+#################################
+$tool->{PARAMS} = {};
+my ($parameters) = $comments =~ /PARAMETERS:\s*(.*)$/s;
+
+foreach (split /^\s*-/m, $parameters) {
+
+    if(/^\s*$/ ) { next; }
+
+    my ($name, $text) = /(\w+)\s*(.*)/s;
+
+    $text =~ s/\s*$//;
+    $text = ucfirst($text);
+    if($text !~ /\.$/ ) { $text .= '.' }
+
+    my $param = {};
+    $param->{DESCRIPTION} = $text;
+    $tool->{PARAMS}->{$name} = $param;
+
+  #  print "$name = $text\n--------------------\n";
+}
+
+############################################
+# get the name of the user interface object 
+############################################
+my @code = grep { !(/^\/\*\*/ .. /\*\*\/\s*$/) } @lines;
+
+chomp(@code);
+@code = split(/[;\{\}]/, ( join(' ', @code) ));
+
+#foreach (@code) { print "$_\n"; }
+
+my ($line) = grep /UserInterface\*?\s+/, @code;
+my ($pointer, $ui) = $line =~ /UserInterface(\*?)\s+(\w+)/;
+my ($ui_type) = $line =~ /new\s+(\w+)\(/;
+
+$tool->{UI_TYPE} = $ui_type;
+
+if($pointer) { $ui .= "\s*->\s*" }
+else         { $ui .= "\s*\.\s*" }
+
+#print "$line\n";
+#print "|$ui| |$ui_type|\n";
+
+
+##############################
+# extract parameter defaults 
+##############################
+foreach $line (grep /${ui}setDefault\(/, @code ) {
+
+    my ($name, $default) = $line =~
+                                 /${ui}setDefault\(\s*"(.*?)"\s*,\s*(.*?)\s*\)/;
+
+    ##########################
+    # remove quotes
+    ##########################
+    $default =~ s/^\s*"//;
+    $default =~ s/"\s*$//;
+
+    if($default eq "" ) { $default = "&nbsp;" }
+
+    unless($tool->{PARAMS}->{$name}) { $tool->{PARAMS}->{$name}={} }
+    $tool->{PARAMS}->{$name}->{DEFAULT} = $default;
+
+ #   print "$name = |$default|\n";
+
+}
+
+
+####################################
+# extract parameter types
+####################################
+foreach $line (grep /${ui}get(\w+)\(/, @code ) {
+
+    my @values = $line =~ /${ui}get(\w+)\(\s*"(.*?)"\s*[,\)]/g;
+
+    while(@values) {
+
+        my $type = shift @values;
+        my $name = shift @values;
+
+
+        if($type =~ /^[IO]stream$/ ) { $type = "String" }
+
+
+        ##########################
+        # remove quotes
+        ##########################
+        unless($tool->{PARAMS}->{$name}) { $tool->{PARAMS}->{$name}={} }
+        $tool->{PARAMS}->{$name}->{TYPE} = $type;
+
+    }
+
+}
+
+
+
+return $tool;
+
+} # end of extract_info function
+
+
+###############################################################################
+# create an HTML page describing a particular function
+###############################################################################
+sub make_tool_page {
+
+my $tool = shift;
+
+
+#########################################
+# open file and write HTML header stuff
+#########################################
+open  PAGE, ">$tool->{NAME}.html";
+print PAGE "<HTML><HEAD><TITLE>$tool->{NAME}</TITLE></HEAD>\n";
+print PAGE "<BODY BGCOLOR=\"white\">\n";
+print PAGE "<H1>Tool: $tool->{NAME}</H1>\n";
+
+#######################################
+# description
+#######################################
+print PAGE "<H2>Description</H2>\n";
+print PAGE "$tool->{DESCRIPTION}<P>\n";
+
+
+#######################################
+# parameter summary
+#######################################
+my $params = $tool->{PARAMS};
+
+parameter_summary($tool->{UI_TYPE}, $params);
+
+
+#######################################
+# parameters
+#######################################
+print PAGE "<H2>Parameters</H2>\n";
+print PAGE "<DL>\n";
+my $name;
+foreach $name (sort keys %$params) {
+
+my $default="";
+if(defined $params->{$name}->{DEFAULT}) { 
+    $default = "(default = $params->{$name}->{DEFAULT})";
+}
+
+print PAGE "<DT><STRONG>$name</STRONG> $params->{$name}->{TYPE} $default\n";
+print PAGE "<DD>$params->{$name}->{DESCRIPTION}<P>\n";
+
+}
+
+print PAGE "</DL>\n";
+
+
+
+####################################
+# end of page stuff
+####################################
+print PAGE "</BODY></HTML>\n";
+close PAGE;
+
+} #end of make_tool_page
+
+
+
+############################################################################
+# make a summary of parameters which depends on the actual interface used.
+############################################################################
+sub parameter_summary {
+
+my $type = shift;
+my $params = shift;
+
+if($type eq "CommandLineUI") {
+    CommandLineUI_parameter_summary($params);
+}
+} # end of parameter_summary
+
+
+############################################################################
+# make a summary of parameters specific to the CommandLineUI
+############################################################################
+sub CommandLineUI_parameter_summary {
+
+my $params = shift;
+
+print PAGE "<H2>Option Summary</H2>\n";
+print PAGE "<TABLE BORDER=1 CELLPADDING=3>\n";
+print PAGE "<TR><TH>Option</TH><TH>Argument Type</TH><TH>Default Value</TH>\n";
+my @names = sort keys %$params;
+my $name;
+foreach $name (@names) {
+
+    my $pre = unique_substring($name,@names);
+    my $post = substr($name,length($pre));
+
+    print PAGE "<TR>\n";
+    print PAGE "<TD>-<STRONG>$pre</STRONG>$post</TD>\n";
+    print PAGE "<TD>$params->{$name}->{TYPE}</TD>\n";
+    print PAGE "<TD ALIGN=\"right\">$params->{$name}->{DEFAULT}</TD>\n";
+
+    print PAGE "</TR>\n";
+
+}
+
+print PAGE "</TABLE><P>\n";
+
+print PAGE "Only the initial unique characters of each option are\n";
+print PAGE "significant. Each option must be followed by an argument\n";
+print PAGE "of the given type. Boolean \"true\" and \"false\" are indicated\n";
+print PAGE "with \"y\" and \"n\" respectively. A boolean option without a \n";
+print PAGE "value is assumed to be \"true\".\n";
+print PAGE "For filename arguments, \"-\" means either stdin or stdout\n";
+print PAGE "as appropriate.\n";
+print PAGE "Each option is described in detail below.\n";
+
+
+} # end of CommandLineUI_parameter_summary function
+
+
+
+##########################################################################
+# get the initial characters of a string which are unique among a list
+# or strings
+##########################################################################
+sub unique_substring {
+
+my $string = shift;
+my @list = grep {$_ ne $string}  @_;
+
+my $i;
+for($i=1; $i<=length($string); $i++) {
+
+    my $sub = substr($string, 0, $i);
+    unless( grep /^${sub}/, @list ) { return $sub; }
+}
+
+
+} # end of unique_substring function
+
+
+##########################################################################
+# make an HTML index of all tools
+##########################################################################
+sub make_tool_index {
+
+my @tools = @_;
+
+
+#########################################
+# open file and write HTML header stuff
+#########################################
+open  INDEX, ">tool_index.html";
+print INDEX "<HTML><HEAD><TITLE>Index of all Tools</TITLE></HEAD>\n";
+print INDEX "<BODY BGCOLOR=\"white\">\n";
+print INDEX "<CENTER><H1>Index of all Tools</H1></CENTER>\n";
+print INDEX "This page lists all the software tools in this package.\n";
+print INDEX "You may also view either an\n";
+print INDEX "<A HREF=\"class_index.html\">alphabetic index</A>\n";
+print INDEX "or an <A HREF=\"tree.html\"> inheritance tree</A>\n";
+print INDEX "of all the C++ classes used by these tools\n";
+
+print INDEX "<HR>\n";
+
+
+#######################
+# list all the tools
+#######################
+print INDEX "<FONT SIZE=\"+1\">\n";
+print INDEX "<UL>\n";
+
+my $tool;
+foreach $tool (sort { $a->{NAME} cmp $b->{NAME} } @tools ) {
+
+#print "tool=$tool name = $tool->{NAME}\n";
+
+    my $name = $tool->{NAME};
+
+    print INDEX "<LI><A HREF=\"$name.html\">$name</A><P>\n";
+
+}
+
+print INDEX "</UL>\n";
+print INDEX "</FONT>\n";
+
+
+
+####################################
+# end of page stuff
+####################################
+print INDEX "</BODY></HTML>\n";
+close INDEX;
+
+
+} # end of make_tool_index function

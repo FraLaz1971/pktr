@@ -1,0 +1,91 @@
+######################################################################
+# Define all SWIFT Telemetry.
+#
+# VERSION:
+#
+# CHANGE HISTORY:
+# Date     Author         Description
+# -------- -------------- ---------------------------------------------------
+# 04/11/2001 dja          Example
+######################################################################
+
+# Define delimiter
+DEL,|
+
+# Define telemetry subsystems
+SSI| TELEMETRY           |+|"Telemetry"|
+
+# Define telemetry points
+TLM| CMDPDATA         |+|| TELEMETRY       |       UB|  8|||1|                 | AccbCurr        ||T|"SM Memory Dump Data (up to 255 bytes)"|
+TLM| CMDUMPCNUM       |+|| TELEMETRY       |       UB|  8|||1|                 |                 ||T|"SM Memory Dump Copy Number"|
+TLM| CMDUMPCTOT       |+|| TELEMETRY       |       UB|  8|||1|                 | AmagTemp        ||T|"SM Memory Dump Copy Total"|
+TLM| CMDUMPENDADD     |+|| TELEMETRY       |    U1234| 32|||1|                 | Avt_sel         ||T|"SM Memory Dump End Address"|
+TLM| CMDUMPPKTADD     |+|| TELEMETRY       |    U1234| 32|||1|                 | Aprt            ||T|"SM Memory Dump Packet Address"|
+TLM| CMDUMPPKTSIZ     |+|| TELEMETRY       |      U12| 16|||1|                 |                 ||T|"SM Memory Dump Packet Size"|
+TLM| CMDUMPSTADD      |+|| TELEMETRY       |    U1234| 32|||1|                 |                 ||T|"SM Memory Dump Start Address"|
+TLM| CMSPARE1         |+|| TELEMETRY       |       UB|  8|||1|                 |                 ||T|"SM Memory Dump Spare 1"|
+TLM| CMSPARE2         |+|| TELEMETRY       |       UB|  8|||1|                 |                 ||T|"SM Memory Dump Spare 2"|
+TLM| H0007APID        |+|| TELEMETRY       |      U12| 16|||1|                 |                 ||T|"APID 7 Packet ID Application ID"|
+TLM| H0007CNT         |+|| TELEMETRY       |      U12| 16|||1|                 |                 ||T|"APID 7 Packet Sequence Control Source Sequence Count"|
+TLM| H0007PCKT        |+|| TELEMETRY       |      U12| 16|||1|                 |                 ||T|"APID 7 Packet ID Type"|
+TLM| H0007PLEN        |+|| TELEMETRY       |      U12| 16|||1|                 |                 ||T|"APID 7 Packet Length"|
+TLM| H0007PVNO        |+|| TELEMETRY       |      U12| 16|||1|                 |                 ||T|"APID 7 Packet ID Version Number"|
+TLM| H0007SECONDS     |+|| TELEMETRY       |    U1234| 32|||1|                 |                 ||T|"APID 7 System Time"|
+TLM| H0007SEGF        |+|| TELEMETRY       |      U12| 16|||1|                 |                 ||T|"APID 7 Packet Sequence Control Segmentation Flag"|
+TLM| H0007SHDF        |+|| TELEMETRY       |      U12| 16|||1|                 |                 ||T|"APID 7 Packet ID Secondary Header Flag"|
+TLM| H0007SUBSECS     |+|| TELEMETRY       |      U12| 16|||1|                 |                 ||T|"APID 7 System Time Subseconds"|
+TLM| H0007TIME        |+|| TELEMETRY       |   TIME42| 48|||1|                 |                 ||T|"APID 7 System Time when packet was formed"|
+TLM| H0009APID        |+|| TELEMETRY       |      U12| 16|||1|                 |                 ||T|"APID 9 Packet ID Application ID"|
+TLM| H0009CNT         |+|| TELEMETRY       |      U12| 16|||1|                 |                 ||T|"APID 9 Packet Sequence Control Source Sequence Count"|
+TLM| H0009PCKT        |+|| TELEMETRY       |      U12| 16|||1|                 |                 ||T|"APID 9 Packet ID Type"|
+TLM| H0009PLEN        |+|| TELEMETRY       |      U12| 16|||1|                 |                 ||T|"APID 9 Packet Length"|
+TLM| H0009PVNO        |+|| TELEMETRY       |      U12| 16|||1|                 |                 ||T|"APID 9 Packet ID Version Number"|
+TLM| H0009SECONDS     |+|| TELEMETRY       |    U1234| 32|||1|                 |                 ||T|"APID 9 System Time"|
+TLM| H0009SEGF        |+|| TELEMETRY       |      U12| 16|||1|                 |                 ||T|"APID 9 Packet Sequence Control Segmentation Flag"|
+TLM| H0009SHDF        |+|| TELEMETRY       |      U12| 16|||1|                 |                 ||T|"APID 9 Packet ID Secondary Header Flag"|
+TLM| H0009SUBSECS     |+|| TELEMETRY       |      U12| 16|||1|                 |                 ||T|"APID 9 System Time Subseconds"|
+TLM| H0009TIME        |+|| TELEMETRY       |   TIME42| 48|||1|                 |                 ||T|"APID 9 System Time when packet was formed"|
+TLM| STSMDIRCHK052    |+|| TELEMETRY       |      U12| 16|||1|                 |                 ||T|"File 52 checksum match flag"|
+TLM| STSMDIRCHK053    |+|| TELEMETRY       |      U12| 16|||1|                 |                 ||T|"File 53 checksum match flag"|
+TLM| STSMDIRCHK054    |+|| TELEMETRY       |      U12| 16|||1|                 |                 ||T|"File 54 checksum match flag"|
+TLM| STSMDIRCHK055    |+|| TELEMETRY       |      U12| 16|||1|                 |                 ||T|"File 55 checksum match flag"|
+TLM| STSMDIRCHK056    |+|| TELEMETRY       |      U12| 16|||1|                 |                 ||T|"File 56 checksum match flag"|
+TLM| STSMDIRID        |+|| TELEMETRY       |       UB|  8|||1|                 |                 ||T|"Filesystem ID"|
+TLM| STSMDIRMODE      |+|| TELEMETRY       |       UB|  8|||1|                 |                 ||T|"Filesystem access mode"|
+
+# Define discrete enumerations.
+DSC| MODECODE         | "DYN_BUSCTRL"      |+|      0.0 |      0.0 |         |         |"Dynamic Bus Control"|
+DSC| MODECODE         | "SYNCH"            |+|      1.0 |      1.0 |         |         |"Synchronize"|
+DSC| MODECODE         | "XMIT_STAT"        |+|      2.0 |      2.0 |         |         |"Transmit Status Word"|
+DSC| MODECODE         | "INI_SELF_TST"     |+|      3.0 |      3.0 |         |         |"Initiate Self Test"|
+DSC| MODECODE         | "XMTR_SHUT"        |+|      4.0 |      4.0 |         |         |"Transmitter Shutdown"|
+DSC| MODECODE         | "XMTR_SHUT_OV"     |+|      5.0 |      5.0 |         |         |"Override Transmitter Shutdown"|
+DSC| MODECODE         | "INHB_TRM_FLG"     |+|      6.0 |      6.0 |         |         |"Inhibit Terminal Flag Bit"|
+DSC| MODECODE         | "INHBTRMFLG_OV"    |+|      7.0 |      7.0 |         |         |"Override Inhibit Terminal Flag Bit"|
+DSC| MODECODE         | "RESET_RT"         |+|      8.0 |      8.0 |         |         |"Reset Remote Terminal"|
+DSC| MODECODE         | "XMIT_VECT_WD"     |+|     16.0 |     16.0 |         |         |"Transmit Vector Word"|
+DSC| MODECODE         | "SYNCH_WD"         |+|     17.0 |     17.0 |         |         |"Synchronize With Data Word"|
+DSC| MODECODE         | "XMIT_LST_CMD"     |+|     18.0 |     18.0 |         |         |"Transmit Last Command"|
+DSC| MODECODE         | "XMIT_BIT_WD"      |+|     19.0 |     19.0 |         |         |"Transmit Bit Word"|
+DSC| MODECODE         | "SEL_XMTR_SHUT"    |+|     20.0 |     20.0 |         |         |"Selected Transmitter Shutdown"|
+DSC| MODECODE         | "SELXMTRSHUT_OV"   |+|     21.0 |     21.0 |         |         |"Override Selected Transmitter Shutdown"|
+
+######################################################################
+# Source Packet APID 7
+PKT| 7| H0007APID        |0|+|||   0| 5|11|0||"APID 7 Packet ID Application ID"|
+PKT| 7| H0007SHDF        |0|+|||   0| 4| 1|0||"APID 7 Packet ID Secondary Header Flag"|
+PKT| 7| H0007PCKT        |0|+|||   0| 3| 1|0||"APID 7 Packet ID Type"|
+PKT| 7| H0007PVNO        |0|+|||   0| 0| 3|0||"APID 7 Packet ID Version Number"|
+PKT| 7| H0007CNT         |0|+|||   2| 2|14|0||"APID 7 Packet Sequence Control Source Sequence Count"|
+PKT| 7| H0007SEGF        |0|+|||   2| 0| 2|0||"APID 7 Packet Sequence Control Segmentation Flag"|
+PKT| 7| H0007PLEN        |0|+|||   4| 0|16|0||"APID 7 Packet Length"|
+PKT| 7| H0007SECONDS     |0|+|||   6| 0|32|0||"APID 7 System Time"|
+PKT| 7| H0007SUBSECS     |0|+|||  10| 0|16|0||"APID 7 System Time Subseconds"|
+PKT| 7| STSMDIRID        |0|+|||  12| 0| 8|0||"Filesystem ID"|
+PKT| 7| STSMDIRMODE      |0|+|||  13| 0| 8|0||"Filesystem access mode"|
+PKT| 7| STSMDIRCHK052    |0|+|||  16| 7| 1|0||"File 52 checksum match flag"|
+PKT| 7| STSMDIRCHK053    |0|+|||  16| 6| 1|0||"File 53 checksum match flag"|
+PKT| 7| STSMDIRCHK054    |0|+|||  16| 5| 1|0||"File 54 checksum match flag"|
+PKT| 7| STSMDIRCHK055    |0|+|||  16| 4| 1|0||"File 55 checksum match flag"|
+PKT| 7| STSMDIRCHK056    |0|+|||  16| 3| 1|0||"File 56 checksum match flag"|
+

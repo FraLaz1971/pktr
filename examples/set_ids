@@ -1,0 +1,39 @@
+#! /aps/tools/squirt/squirt
+##############################################################################
+#
+##############################################################################
+
+init: $target=$1;
+init: $obs=$2;
+
+#########################################
+# check for unknown APIDS
+#########################################
+(!%head2 && %apid<2045) && "Warning[$packet] unknown APID %apid\n";
+
+
+
+###############################################################
+# if this is page 1 of an LDP, set the ID in the packet data
+###############################################################
+$page1=%ldp && %page==1;
+$page1 && (%U[2,8 ] = $obs   );
+$page1 && (%U[3,24] = $target);
+
+################################################################
+# if this is a head3 packet, set the ID in the packet header 
+################################################################ 
+%head3 && (%obs    = $obs);
+%head3 && (%target = $target);
+
+########################################################################
+# is this a UVOT segmented packet?
+# if so, we have to look into the data of the first packet of a group
+#######################################################################
+$segmented = %apid==704 || (%apid>=768 && %apid<=771)
+                        || %apid==774 || %apid==780;
+
+($segmented && %first) && (%U[0, 8] = $obs   );
+($segmented && %first) && (%U[1,24] = $target);
+
+

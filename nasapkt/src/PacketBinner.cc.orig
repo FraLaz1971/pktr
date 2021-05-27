@@ -1,0 +1,173 @@
+#include "PacketBinner.h"
+
+#include <sstream>
+#include <fstream>
+#include <iomanip>
+
+/****************************************************************************
+* constructor
+****************************************************************************/
+PacketBinner::PacketBinner() {
+
+
+_separator = "_";
+
+} // end of constructor
+
+/****************************************************************************
+* destructor
+****************************************************************************/
+PacketBinner::~PacketBinner() {
+
+cout << "destructing PacketBinner "<<this<<"\n";
+
+for( map<string, PacketWriter*>::iterator it = writers.begin();
+     it != writers.end();
+    ++it ) {
+
+//cout << "Closing "<< (*it).first << "\n";
+
+    PacketWriter* pw = (*it).second;
+    Writer* w = pw->getWriter();
+    ostream* stream = w->getStream();
+ 
+    delete pw;
+    delete w;
+
+    ofstream* file= dynamic_cast<ofstream*>(stream);
+
+    if(file) file->close();
+
+    delete stream;
+
+}
+
+} // end of constructor
+
+
+
+/****************************************************************************
+* This overrides the genric pipe method to write the packet into the 
+* appropriate bin file.
+****************************************************************************/
+void PacketBinner::pushIn(CCSDSPacket* p) {
+
+PacketWriter* w = getWriter( getFile(p) );
+
+/*********************************************************************
+* if we couldn't get a writer, then push the packet through the pipe 
+* otherwise write the packet to the appropriate writer
+*********************************************************************/
+if(w == NULL ) {
+    if(sink != NULL) *sink << p;
+} else {
+    *w << p;
+}
+
+} // end of push in method
+
+
+
+
+/****************************************************************************
+* Construct a File object for a given apid, time, and id.
+* The time is included in the file name, to insure that we have a unique
+* identifier even if the id can repeat itself. This way we can distinguish
+* e.g. id=6 on 2001-08-29 from id=6 on 2001-09-01.
+* Note that the units of time are arbitrary. Subclasses should choose
+* a time unit which is longer than the time spanned by the packets in a
+* given file, but shorter than the period over which the id can repeat itself.
+* See the getFileNearTime() method for more information.
+*****************************************************************************/
+File* PacketBinner::getFile(int apid, int time, unsigned int id) {
+
+ostringstream tmp;
+
+tmp << hex << setfill('0') << setw(8) << id
+    << _separator
+    << setw(4) << time
+    << ends;
+
+ostringstream tmp2;
+tmp2 << apid << ends;
+
+string dir = _dir + "/" + tmp.str();
+string file = _base + tmp.str() + _separator + tmp2.str() + _ext;
+
+/*
+if(apid==400) cout << "dir="<<dir
+                   <<" file="<<file
+                   <<" time="<<time
+                   <<endl;
+*/
+
+
+//cout << "filename=|"<<tmp.str()<<"|\n";
+
+return new File(dir.c_str(), file.c_str() );
+
+
+} // end of getFile method
+
+
+/****************************************************************************
+* returns a File object for a file with a time indicator within one
+* of the given time, preferably one which already exists.
+* This takes care of the problem that a time indicator may increment
+* by one in the middle of a bin file (i.e. the bin spans "midnight").
+****************************************************************************/
+File* PacketBinner::getFileNearTime(int apid, int time, unsigned int id) {
+
+File* before = getFile(apid, time-1, id);
+File* during = getFile(apid, time  , id);
+File* after  = getFile(apid, time+1, id);
+
+// cout << "before="<<before->name() <<"\n";
+// cout << "during="<<during->name() <<"\n";
+// cout << "after="<<after->name() <<"\n";
+
+if(during->directory()->exists() ) return during;
+if(before->directory()->exists() ) return before;
+if(after ->directory()->exists() ) return after;
+
+// cout << "nothing exists\n";
+
+/*****************************************
+* no directory exists yet, so create one *
+*****************************************/
+during->directory()->makeDirectory();
+
+return during;
+
+} // end of getFileNearTime method
+
+
+
+/****************************************************************************
+* return the PacketWriter for a particular File object, creating one if 
+* it does not already exist.
+****************************************************************************/
+PacketWriter* PacketBinner::getWriter(File* f) {
+
+//cout << "PacketBinner::getWriter: f="<<f<<endl;
+
+if(f==NULL) return NULL;
+
+/***************************************
+* first try getting an existing writer *
+***************************************/
+PacketWriter* w = writers[f->name()];
+if(w != NULL ) return w;
+
+//cout << this << " has no writer for "<< f->name() <<"\n";
+
+/*********************************************************
+* if no writer exists for this file yet, then create one *
+*********************************************************/
+w = new PacketWriter(f->writer());
+writers[f->name()] = w;
+return w;
+
+} // end of getWriter method
+
+

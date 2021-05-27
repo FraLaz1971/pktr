@@ -1,0 +1,57 @@
+This directory contains some test data plus a script with will run the 
+important software tools and check their output. Run "./check" to test
+the tools after compiling.
+
+
+all_data.5.6.2 - 
+    Sample UVOT telemetry data provided by Pat Broos from tests
+    done on 2001-08-30
+
+all_data.5.6.2.count - 
+    output of the count_packets tool when run on 
+    the file all_data.5.6.2 . This is an ASCII text file
+
+apids.list
+    Configuration file for SwiftTypedPacketReader object. It lists APIDs
+    and their corresponding packet types.
+
+check -   
+    This is the test script written in ksh. Run "./check" And the
+    output will tell you whether the tools worked or failed.
+
+doc.ldp - 
+    This is doc.pdf encoded as LDP packets by the "encode_ldp" tool.
+    The packets in this file have checksums.
+
+
+doc.pdf - 
+    This is a data file which may be encoded in LDP format. It is
+    actually a copy of Louise Bashar's LDP format specification
+    document, but for test purposes any arbitrary file would work as well.
+
+swift_* -
+    This is a series of files output from the bin_packets tool. Each 
+    contains a single APID from the file all_data.5.6.2 .
+
+
+timeline -
+    A simple timeline file needed by the bin_packets tool to bin HEAD2
+    packets.
+
+uvot_merged.ccsds - 
+    this is the result of running "merge_packets" on
+    the uvot_segmented.ccsds file.
+
+
+uvot_segmented.ccsds - 
+    This file contains Segmented UVOT packets which may
+    be read by the "merge_packets" tool. The file is actually an
+    early sample of UVOT Image mode data provided by Pat Broos.
+    The pixel data in this file are all zero, and it is only part of a
+    full image.
+
+uvot_used.orig -
+    This file contains output from the bin_packets tool. It contains all the
+    original segmented packets from the file all_data.5.6.2 .
+
+

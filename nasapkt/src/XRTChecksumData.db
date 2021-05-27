@@ -1,0 +1,13 @@
+########################################################################
+# This is an ITOS-like database definition for the body of a swift
+# APID 1161 XRT Command Echo Message
+########################################################################
+
+# Define delimiter
+DEL,|
+
+#
+# Define each data field with the following format:
+#PKT|APID|Mnemonic||+||type|start byte|start bit|size in bits|||description|
+
+PKT||checksum||+||U12| | |16|||"XRT packet checksum"

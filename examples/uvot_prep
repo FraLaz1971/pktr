@@ -1,0 +1,62 @@
+#! /aps/tools/squirt/squirt
+
+##########################################################
+# mark that we have not yet initialized the min/max times
+##########################################################
+init: $time_init=0;
+
+#################################################
+# get the target/obs IDs from the command line 
+################################################
+init: $target=$1;
+init: $obs=$2;
+init: !$obs && "Warning no target obs given on command line\n";
+init: $id = $target*256 + $obs;
+
+###########################################
+# determine characteristics of the packet
+###########################################
+$segmented = %apid >=768 && %apid <= 771;
+$is_hk = %head2 && !%head3 && !$segmented;
+$need_to_init = !$time_init && $is_hk;
+
+######################################
+# make some sanity checks
+######################################
+%ldp && "Warning[$packet] LDP packet treated as HEAD2\n";
+(!%head2 && $apid < 2045) && "Warning[$packet] unknown APID %apid\n";
+
+#########################################
+# initialize the times if need be
+#########################################
+$need_to_init && ($max = %time2);
+$need_to_init && ($min = %time2);
+$need_to_init && ($time_init=1);
+
+###########################################################
+# keep a running min and max of the time in HEAD2 packets
+###########################################################
+($is_hk && %time2 > $max) && ($max = %time2);
+($is_hk && %time2 < $min) && ($min = %time2);
+
+########################################
+# set the IDs in the tertiary headers
+########################################
+($obs && %head3) && (%target = $target);
+($obs && %head3) && (%obs = $obs);
+
+#####################################################
+# ...and in the first packet of each segmented group
+#####################################################
+($obs && $segmented && %first) && (%U[0, 8] = $obs   );
+($obs && $segmented && %first) && (%U[1,24] = $target);
+
+################################################################
+# print the earliest and latest times for all the head2 packets
+################################################################
+after: "$min $max\n";
+
+###########################################
+# only keep packets with secondary headers
+###########################################
+filter: %apid < 2045;
