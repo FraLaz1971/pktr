@@ -1,29 +1,39 @@
-__________________
-1) What is Squirt?
+# this software creates a library to handle
+# telemetry data: libpacket.a
+# and a tool: pktr
+# (packet reader)
+# based on an original NASA project
+# using packets library (3.3)
+# and pktr tool
+# for more info see
+https://swift.gsfc.nasa.gov/sdc/software/ccsds/
 
-Squirt is a scripting language for viewing, manipulating and filtering
+__________________
+1) What is pktr?
+
+pktr is a scripting language for viewing, manipulating and filtering
 Swift CCSDS telemetry. It's kind of like "awk" for packets.
 
 
 _____________________
-2) Installing Squirt:
+2) Installing pktr:
 
 First you will need to install the "packets" software available from 
 http://adfwww.gsfc.nasa.gov/swift/software/
 
-Then after unpacking the squirt tar file you will need to make a few simple
+Then after unpacking the pktr tar file you will need to make a few simple
 edits to the Makefile. The comments at the head of that file tell you
 what to do.
 
 Then just run "make". You will need g++ to compile it. It has been tested
 with both 2.x and 3.x versions of g++ on Solaris and Linux.
 
-The "squirt" executable can be moved to a "bin" directory, or you can 
+The "pktr" executable can be moved to a "bin" directory, or you can 
 leave it where it is and set your PATH accordingly.
 
 
 ________________
-3) Using Squirt:
+3) Using pktr:
 
 ______________
 3.1) Examples:
@@ -32,16 +42,16 @@ distribution. See the README file there.
 
 ______________________
 3.2) Running a Script:
-There are three ways to run a squirt script. These should be familiar
+There are three ways to run a pktr script. These should be familiar
 to perl or shell script users.
 
-- If the first line of the script begins with #! /full/path/to/squirt
+- If the first line of the script begins with #! /full/path/to/pktr
   then you can simply execute the script.
 
-- you can run "squirt script_filename"
+- you can run "pktr script_filename"
 
 - or you can put the script into the command line as a "one-liner"
-  (e.g. squirt -e 'filter: %apid==1344;'). Note that it is a good idea to single
+  (e.g. pktr -e 'filter: %apid==1344;'). Note that it is a good idea to single
   quote the script so the shell won't mess with it. Note also that there must
   be a space between the "-e" and the script (unlike in perl). Don't forget the
   semicolon, and make sure you redirect stdout or you may get binary data 
@@ -53,12 +63,12 @@ ___________
 ____________________________________________
 3.3.1 Most Things Are Like You Would Expect:
 
-Squirt uses a syntax very similar to that of perl or C. A squirt script
+pktr uses a syntax very similar to that of perl or C. A pktr script
 is made up of a series of expressions ending in semicolons.
 comments begin with a "#" and continue to the end of a physical line or
 until the next semicolon.
 
-By default a squirt script reads packets from stdin and writes them to stdout.
+By default a pktr script reads packets from stdin and writes them to stdout.
 It can write messages to stderr.
 It executes all commands once per packets, except for commands which begin
 with one of the following labels:
@@ -80,7 +90,7 @@ with one of the following labels:
 The following operators: +, -, *, /, !, &&, ||, <, >, ==, =, (, and )
 all have their familiar usages as in perl or C.  
 The operator precedence is the same as for those languages, except that the
-assignment operator "=" has lower priority than && and ||. Squirt may require
+assignment operator "=" has lower priority than && and ||. pktr may require
 parenthesis in places you are not used to. For example you can use && and ||
 to make if-then statements as is often done in perl:
 
@@ -90,7 +100,7 @@ You have to do this instead:
 $condition && ($value=%apid); # correct, sets $value if $condition is true
 
 
-Squirt recognizes literal numbers. For example:
+pktr recognizes literal numbers. For example:
 $value=7.3;
 All numbers are treated as double precision floating point values.
 
@@ -99,7 +109,7 @@ assigning a value to the variable, just as in perl. A variable name
 can contain characters a-z, A-Z, 0-9, and "_".
 
 The variables $1, $2, etc are set to the command line arguments, just as
-in shell scripts. Note that squirt has no string data type, so these values
+in shell scripts. Note that pktr has no string data type, so these values
 can only be numbers.
 
 The variable "$packet" is automatically set to the number of the current 
@@ -179,8 +189,8 @@ ________________________
 3.4 Command Line Options
 
 You can specify various command line options before the script file name
-when running squirt. Note that if you are using the "shebang" (#!) method
-of running squirt, the options must be given in the first line of the script
+when running pktr. Note that if you are using the "shebang" (#!) method
+of running pktr, the options must be given in the first line of the script
 and not on the command line of the script. 
 
 Most options take an argument. There must be a space between the option and the
@@ -193,14 +203,14 @@ The following options are available:
 -o outfile   - write packets to the given file instead of stdout
 
 -a apid_list - use the given APID configuration file instead of the default
-               one specified when squirt was compiled.
+               one specified when pktr was compiled.
 
 -e commands  - run the given commands instead of running the commands in
                a file. This is convenient for very short (e.g. one line) 
                scripts.
 
--v           - run squirt in verbose mode. This traces the expression parsing
-               and execution and is useful for debugging, since squirt
+-v           - run pktr in verbose mode. This traces the expression parsing
+               and execution and is useful for debugging, since pktr
                runtime error messages usually do not say where in the script
                they occured. Tracing information is written to stderr.
                Note that this can produce alot of output if you are processing
@@ -208,13 +218,15 @@ The following options are available:
 
 
 ___________________________
-4. Why is it called Squirt?
+4. Why is it called pktr?
 
-No particular reason.
-
+it is for PacKeT Reader
 
 ________
 5. Help!
 
-Squirt is written by Edward Pier pier@ssvs.gsfc.nasa.gov
-Let me know if you find it useful or have any problems.
+original nasa tool (squirt) is written by Edward Pier pier@ssvs.gsfc.nasa.gov
+Let him know if you find it useful or have any problems.
+#
+updates by: francesco.lazzarotto@inaf.it
+
